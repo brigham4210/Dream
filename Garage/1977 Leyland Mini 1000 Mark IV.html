@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1977 Leyland Mini 1000 Mk IV – SLW 287R</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; font-family: "Helvetica Neue", Arial, sans-serif; }
+  body { background: radial-gradient(ellipse 120% 95% at 50% 40%, #f3f4f2 0%, #dadddc 45%, #a9afb1 100%); }
+  canvas { display: block; touch-action: none; cursor: grab; }
+  #title { position: fixed; left: 20px; top: 16px; color: #23281a; pointer-events: none; }
+  #title b { display: block; font-size: 19px; letter-spacing: .02em; }
+  #title span { font-size: 13px; opacity: .7; }
+  #bar { position: fixed; left: 0; right: 0; bottom: 14px; display: flex; flex-direction: column; gap: 7px; align-items: center; padding: 0 10px; pointer-events: none; }
+  .row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; pointer-events: auto; }
+  .row i { font-style: normal; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #23281a; opacity: .6; align-self: center; margin-right: 2px; }
+  button { font: inherit; font-size: 12.5px; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16);
+           background: rgba(24,26,22,.58); color: #f2f2ea; cursor: pointer; backdrop-filter: blur(8px); }
+  button:hover { background: rgba(24,26,22,.85); }
+  button:focus-visible { outline: 2px solid #e6ea8c; outline-offset: 2px; }
+  button.on { background: #dfe56e; color: #1c1f12; border-color: #dfe56e; }
+  #tg { position: fixed; right: 16px; top: 58px; }
+  #bar[hidden] { display: none; }
+  @media (max-width: 700px) { #tg { top: 14px; } }
+  #hint { position: fixed; right: 20px; top: 18px; font-size: 12px; color: #23281a; opacity: .65; pointer-events: none; text-align: right; line-height: 1.5; }
+  @media (max-width: 700px) { #hint { right: auto; left: 20px; top: 62px; text-align: left; } }
+  #back { position: fixed; left: 20px; top: 62px; font-size: 12.5px; padding: 6px 12px; border-radius: 999px; background: rgba(24,26,22,.58); color: #f2f2ea; text-decoration: none; }
+  #back:hover { background: rgba(24,26,22,.85); }
+  @media (max-width: 700px) { #back { top: 104px; } }
+  /* shown inside index.html: the car stands in the 3D showroom, without this page's own buttons */
+  html.bay body { background: #e9e9e6; }
+  html.bay #title, html.bay #hint, html.bay #tg, html.bay #bar, html.bay #back { display: none !important; }
+  #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 30px; text-align: center; color: #600; }
+</style>
+<script>if (location.hash === '#bay') document.documentElement.classList.add('bay');</script>
+<script src="mini.car.js"></script>
+<script src="showroom.js"></script>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="title"><b>1977 Leyland Mini 1000 Mk IV</b><span>Citron Green · matte-black bonnet · SLW 287R</span></div>
+<div id="hint">Drag to rotate · scroll, pinch or + / − to zoom<br>Click a door, window, the bonnet or the boot</div>
+<a id="back" href="index.html">‹ Garage</a>
+<button id="tg" aria-expanded="true">Hide controls</button>
+<div id="bar">
+  <div class="row"><i>Open</i>
+    <button data-part="doorR">Driver door</button>
+    <button data-part="doorL">Passenger door</button>
+    <button data-part="bonnet">Bonnet (hood)</button>
+    <button data-part="boot">Boot (trunk)</button>
+    <button data-part="winR">Driver window</button>
+    <button data-part="winL">Passenger window</button>
+    <button id="all">Open all</button>
+  </div>
+  <div class="row"><i>View</i>
+    <button data-view="q">3/4 front</button>
+    <button data-view="front">Front</button>
+    <button data-view="right">Right</button>
+    <button data-view="rear">Rear</button>
+    <button data-view="rq">3/4 rear</button>
+    <button data-view="left">Left</button>
+    <button data-view="top">Top</button>
+    <button data-view="inside">Driver's seat</button>
+    <button id="spin">Auto-rotate</button>
+    <button id="zin" title="Zoom in (+)">＋ Zoom in</button>
+    <button id="zout" title="Zoom out (−)">－ Zoom out</button>
+  </div>
+</div>
+<div id="err">Could not load three.js – this page needs an internet connection when it is opened.</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
+
+/* ------------------------------------------------------------------ scene */
+const pxRatio = () => Math.max(1, Math.min(devicePixelRatio * 1.5, 3, Math.sqrt(1.1e7 / (innerWidth * innerHeight))));   // supersampled
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(pxRatio());
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 0.62;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const SUN = new THREE.Vector3(3.5, 6, 4);
+{ // image-based lighting: an HDR daylight sky with cloud, a low sun and a dark horizon line.
+  // It is never drawn as a backdrop; it only lights the car and appears in paint, chrome and glass.
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(50, 64, 32), new THREE.ShaderMaterial({
+    side: THREE.BackSide, uniforms: { sunDir: { value: SUN.clone().normalize() } },
+    vertexShader: `varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      uniform vec3 sunDir; varying vec3 vDir;
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+      float fbm(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++) { s += a * noise(p); p = p * 2.03 + 7.1; a *= 0.5; } return s; }
+      void main() {
+        vec3 d = normalize(vDir); float h = d.y;
+        vec3 col = mix(vec3(2.35, 2.4, 2.45), vec3(0.95, 1.08, 1.32), pow(clamp(h, 0.0, 1.0), 0.5));
+        float cl = smoothstep(0.42, 0.72, fbm(d.xz / (max(h, 0.0) + 0.35) * 1.6));
+        col = mix(col, vec3(3.3, 3.3, 3.25), cl * smoothstep(0.03, 0.3, h) * 0.85);
+        float sd = max(dot(d, sunDir), 0.0);
+        col += vec3(1.0, 0.94, 0.82) * (22.0 * pow(sd, 600.0) + 2.2 * pow(sd, 30.0));
+        vec2 n = d.xz / max(length(d.xz), 1e-4);
+        float sil = 0.03 + 0.07 * noise(n * 3.0 + 10.0) + 0.012 * noise(n * 9.0 + 3.0);
+        col = mix(vec3(0.2, 0.2, 0.2), col, smoothstep(sil - 0.012, sil + 0.012, h));
+        if (h < 0.0) col = mix(vec3(0.46, 0.46, 0.44), vec3(0.2, 0.2, 0.19), smoothstep(0.0, -0.55, h));
+        gl_FragColor = vec4(col, 1.0);
+      }` })));
+  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(env, 0, 0.1, 200).texture;
+}
+
+const camera = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.03, 100);
+camera.position.set(3.45, 1.45, 4.3);
+const TARGET = new THREE.Vector3(0, 0.6, 0);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(TARGET);
+controls.enableDamping = true;
+controls.minDistance = 0.04;
+controls.maxDistance = 14;
+const POLAR_OUT = Math.PI / 2 - 0.015;
+controls.maxPolarAngle = POLAR_OUT;
+controls.autoRotate = false;
+controls.autoRotateSpeed = 0.9;
+const BAY = location.hash === '#bay';
+if (BAY) { TARGET.y = 0.85; controls.target.copy(TARGET); camera.position.set(4.75, 1.7, 5.6); controls.maxDistance = 8.5; }
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x77786f, 0.12));
+const sun = new THREE.DirectionalLight(0xfff2de, 2.3);
+sun.position.copy(SUN);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -2.6, right: 2.6, top: 2.6, bottom: -2.6, near: 1, far: 15 });
+sun.shadow.bias = -0.0003;
+sun.shadow.normalBias = 0.012;
+sun.shadow.radius = 4;
+scene.add(sun);
+if (BAY) { sun.color.set(0xffffff); sun.intensity = 1.3; sun.position.set(1.6, 7, 2.6); sun.shadow.radius = 5; }
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: 0.34 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+const ENTRY = window.DREAM_CARS.find(c => c.file === '1977 Leyland Mini 1000 Mark IV.html');
+const { car, parts } = ENTRY.build({ THREE, mergeVertices, scene });
+
+/* ------------------------------------------------------ moving parts + UI */
+for (const k in parts) Object.assign(parts[k], { v: 0, t: 0 });
+const partBtns = [...document.querySelectorAll('[data-part]')], allBtn = document.getElementById('all');
+function syncBtns() {
+  partBtns.forEach(b => b.classList.toggle('on', parts[b.dataset.part].t > 0));
+  const any = Object.values(parts).some(p => p.t > 0); allBtn.textContent = any ? 'Close all' : 'Open all';
+}
+const toggle = k => { parts[k].t = parts[k].t ? 0 : 1; syncBtns(); };
+partBtns.forEach(b => b.onclick = () => toggle(b.dataset.part));
+allBtn.onclick = () => { const any = Object.values(parts).some(p => p.t > 0); for (const k in parts) parts[k].t = any ? 0 : 1; syncBtns(); };
+
+// clicking the car itself
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), tmp = new THREE.Vector3(), canvas = renderer.domElement;
+function pick(ev) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -((ev.clientY - r.top) / r.height * 2 - 1));
+  ray.setFromCamera(ndc, camera);
+  for (const h of ray.intersectObject(car, true)) {
+    const o = h.object;
+    if (!o.userData.proxy) { let vis = true; for (let p = o; p; p = p.parent) if (!p.visible) { vis = false; break; } if (!vis) continue; }
+    if (o.userData.mask && !o.userData.mask(o.worldToLocal(tmp.copy(h.point)))) continue;
+    for (let p = o; p; p = p.parent) if (p.userData.action) return p.userData.action;
+    return null;
+  }
+  return null;
+}
+let down = null, lastHover = 0;
+canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+canvas.addEventListener('pointerup', e => {
+  if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && performance.now() - down.t < 600) { const a = pick(e); if (a) toggle(a); }
+  down = null;
+});
+canvas.addEventListener('pointermove', e => {
+  if (e.buttons || performance.now() - lastHover < 90) return;
+  lastHover = performance.now(); canvas.style.cursor = pick(e) ? 'pointer' : 'grab';
+});
+
+const VIEWS = { q: [3.45, 1.45, 4.3], rq: [-3.8, 1.5, 4.2], front: [6.6, 0.95, 0], rear: [-6.6, 0.95, 0], right: [0, 0.95, 7.2], left: [0, 0.95, -7.2], top: [0.01, 8.8, 0] };
+const INSIDE = { cam: new THREE.Vector3(-0.27, 1.06, 0.30), target: new THREE.Vector3(-0.22, 1.045, 0.285) };
+let goal = null, insideMode = false;
+const spinBtn = document.getElementById('spin');
+const setSpin = v => { controls.autoRotate = v; spinBtn.classList.toggle('on', v); };
+spinBtn.onclick = () => setSpin(!controls.autoRotate);
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => {
+  setSpin(false);
+  insideMode = b.dataset.view === 'inside';
+  controls.rotateSpeed = insideMode ? 0.45 : 1;
+  if (insideMode) { goal = { straight: true, cam: INSIDE.cam, target: INSIDE.target }; controls.maxPolarAngle = Math.PI * 0.8; }
+  else { goal = { target: TARGET, off: new THREE.Vector3(...VIEWS[b.dataset.view]).sub(TARGET) }; controls.maxPolarAngle = POLAR_OUT; }
+});
+controls.addEventListener('start', () => { goal = null; zoomTo = null; setSpin(false); });
+// zoom buttons and + / - keys (scroll wheel and pinch also work)
+let zoomTo = null;
+const zoomBy = f => { goal = null; const d = zoomTo ?? camera.position.distanceTo(controls.target); zoomTo = Math.min(controls.maxDistance, Math.max(insideMode ? 0.04 : 0.6, d * f)); };
+document.getElementById('zin').onclick = () => zoomBy(0.75);
+document.getElementById('zout').onclick = () => zoomBy(1 / 0.75);
+addEventListener('keydown', e => { if (e.key === '+' || e.key === '=') zoomBy(0.8); else if (e.key === '-' || e.key === '_') zoomBy(1.25); });
+const outFov = () => 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(14)) * Math.max(1, 1.5 / camera.aspect)));
+const fit = () => { camera.aspect = innerWidth / innerHeight; camera.fov = insideMode ? 78 : outFov(); camera.updateProjectionMatrix(); renderer.setPixelRatio(pxRatio()); renderer.setSize(innerWidth, innerHeight); };
+addEventListener('resize', fit); fit();
+
+const sph = new THREE.Spherical(), gs = new THREE.Spherical(), off = new THREE.Vector3(), clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  for (const k in parts) { const p = parts[k]; if (Math.abs(p.t - p.v) > 1e-4) { p.v += (p.t - p.v) * Math.min(1, dt * 5); if (Math.abs(p.t - p.v) < 2e-3) p.v = p.t; p.set(p.v); } }
+  if (goal) {
+    controls.target.lerp(goal.target, 0.12);
+    if (goal.straight) {
+      camera.position.lerp(goal.cam, 0.12);
+      if (camera.position.distanceTo(goal.cam) < 0.002) { camera.position.copy(goal.cam); controls.target.copy(goal.target); goal = null; }
+    } else {
+      sph.setFromVector3(off.copy(camera.position).sub(controls.target)); gs.setFromVector3(goal.off);
+      let da = gs.theta - sph.theta; da = Math.atan2(Math.sin(da), Math.cos(da));
+      const dp = gs.phi - sph.phi, dr = gs.radius - sph.radius;
+      sph.theta += da * 0.1; sph.phi += dp * 0.1; sph.radius += dr * 0.1;
+      camera.position.setFromSpherical(sph).add(controls.target);
+      if (Math.abs(da) < 0.002 && Math.abs(dp) < 0.002 && Math.abs(dr) < 0.01) goal = null;
+    }
+  }
+  if (zoomTo !== null) {
+    off.copy(camera.position).sub(controls.target); const d = off.length(), nd = d + (zoomTo - d) * 0.18;
+    camera.position.copy(controls.target).addScaledVector(off, nd / d);
+    if (Math.abs(zoomTo - nd) < 0.003) zoomTo = null;
+  }
+  const wantFov = insideMode ? 78 : outFov();
+  if (Math.abs(camera.fov - wantFov) > 0.05) { camera.fov += (wantFov - camera.fov) * 0.12; camera.updateProjectionMatrix(); }
+  controls.update();
+  renderer.render(scene, camera);
+});
+{ const tg = document.getElementById('tg'), bar = document.getElementById('bar'); const setBar = v => { bar.hidden = !v; tg.textContent = v ? 'Hide controls' : 'Show controls'; tg.setAttribute('aria-expanded', v); }; tg.onclick = () => setBar(bar.hidden); setBar(innerWidth > 700 && innerHeight > 520); }
+if (BAY && window.buildShowroom) {
+  buildShowroom({ THREE, Reflector, scene, renderer, car, info: ENTRY.info });
+  renderer.toneMappingExposure = 0.7; ground.material.opacity = 0.62;
+}
+window.__mini = { parts, toggle, camera, controls, renderer, scene, THREE };
+</script>
+<script>
+  addEventListener('error', e => { if (!document.querySelector('canvas')) document.getElementById('err').style.display = 'flex'; }, true);
+</script>
+</body>
+</html>
