@@ -3,7 +3,7 @@
    Like the real thing, it has two sounds: a deep bass from the middle of the tapa and a sharp slap from its top edge. */
 (window.DREAM_MUSIC = window.DREAM_MUSIC || []).push({
   name: 'Cajón', title: 'Cajón', line: 'Birch box, walnut front · click the top edge to slap, the middle for bass',
-  at: [-2.2, 1.95], turn: 0.5, view: { target: [0, 0.32, 0], cam: [0.35, 0.8, 1.55] },
+  at: [0.4, -2.58], turn: 0, view: { target: [0, 0.32, 0], cam: [0.35, 0.8, 1.55] },
   build({ THREE, scene, sound }) {
 const std = (color, roughness = 0.6, metalness = 0, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
 const g = new THREE.Group(); scene.add(g);
