@@ -44,8 +44,8 @@
 </script>
 </head>
 <body>
-<div id="head"><b>My Music Room</b><span>Piano · guitar · singing studio · camera</span><a href="../">‹ Dream</a></div>
-<div id="hint">Drag to look around · scroll to zoom<br>Click the keys, the strings, the lid, the booth door, the microphone or the camera</div>
+<div id="head"><b>My Music Room</b><span>Piano · guitar · singing studio · two cameras</span><a href="../">‹ Dream</a></div>
+<div id="hint">Drag to look around · scroll to zoom<br>Click the keys, the strings, the lid, the booth door, the microphone or a camera</div>
 <div id="dock">
   <div id="card" hidden><div id="line"><b id="name"></b> <span id="note"></span></div></div>
   <div id="tabs"></div>
@@ -88,7 +88,7 @@ const things = THINGS.map(entry => {
   const { parts = {}, tick } = entry.build({ THREE, scene: root, sound, renderer, world: scene });
   for (const k in parts) Object.assign(parts[k], { v: 0, t: 0 });
   root.updateMatrixWorld(true);
-  const at = p => root.localToWorld(new THREE.Vector3(...p));
+  const at = p => entry.view.world ? new THREE.Vector3(...p) : root.localToWorld(new THREE.Vector3(...p));
   return { entry, root, parts, tick, view: { target: at(entry.view.target), cam: at(entry.view.cam) } };
 });
 
