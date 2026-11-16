@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Dream</title>
-<meta name="description" content="Brigham Chen's Dream projects: an interactive 3D garage of dream cars.">
+<meta name="description" content="Brigham Chen's Dream projects: an interactive 3D garage of dream cars and a 3D closet.">
 <style>
   :root { --bg: #ecebe7; --fg: #1c1d1f; --muted: #6b6c6e; --card: #ffffff; --line: rgba(0,0,0,.08); --accent: #1c1d1f; }
   @media (prefers-color-scheme: dark) { :root { --bg: #151618; --fg: #ececea; --muted: #9a9b9d; --card: #1f2023; --line: rgba(255,255,255,.08); --accent: #ececea; color-scheme: dark; } }
@@ -72,6 +72,26 @@
         <p>A 3D showroom with a 1977 Leyland Mini 1000 and a lowered 1966 Chevrolet C10 stepside, parked side by side under a framed US road map.</p>
         <div class="tags"><span>three.js</span><span>WebGL</span><span>Vanilla JS</span></div>
         <div class="go">Enter the garage →</div>
+      </div>
+    </a>
+    <a class="card" href="Closet/">
+      <div class="art" aria-hidden="true">
+        <svg viewBox="0 0 320 180">
+          <rect x="0" y="150" width="320" height="30" fill="#000" opacity=".05"/>
+          <rect x="40" y="26" width="240" height="5" rx="2.5" fill="#b9bcc0"/>
+          <defs><path id="tee" d="M-9 0q9 8 18 0l14 5 9 15-9 6-6-7v52h-34v-52l-6 7-9-6 9-15z"/></defs>
+          <use href="#tee" x="70" y="46" fill="#f1f0ec" stroke="rgba(0,0,0,.18)"/>
+          <use href="#tee" x="115" y="46" fill="#1b1b1d"/>
+          <use href="#tee" x="160" y="46" fill="#6f8fb4"/>
+          <use href="#tee" x="205" y="46" fill="#5a6040"/>
+          <use href="#tee" x="250" y="46" fill="#b48a5c"/>
+        </svg>
+      </div>
+      <div class="body">
+        <h2>My Closet</h2>
+        <p>An open wardrobe with the 18 pieces I wear: T-shirts and shirts, knits, four jackets and three pairs of trousers, each on its own hanger.</p>
+        <div class="tags"><span>three.js</span><span>WebGL</span><span>Vanilla JS</span></div>
+        <div class="go">Open the closet →</div>
       </div>
     </a>
   </div>
