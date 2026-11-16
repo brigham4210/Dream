@@ -2,7 +2,7 @@
    the wall is the plane z = 0, the guitar faces +z out into the room, metres; the floor is at y = 0.
    Each string plucks on its own; a click on the body strums all six. */
 (window.DREAM_MUSIC = window.DREAM_MUSIC || []).push({
-  name: 'Guitar', title: 'Acoustic guitar', line: 'On a wall hanger · click a string to pluck it, the body to strum',
+  name: 'Acoustic', title: 'Acoustic guitar', line: 'On a wall hanger · click a string to pluck it, the body to strum',
   at: [0.4, -2.758], turn: 0, view: { target: [0, 1.45, 0.1], cam: [0.45, 1.6, 2.5] },
   build({ THREE, scene, sound }) {
 const std = (color, roughness = 0.6, metalness = 0, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
