@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dream</title>
+<meta name="description" content="Brigham Chen's Dream projects: an interactive 3D garage of dream cars.">
+<style>
+  :root { --bg: #ecebe7; --fg: #1c1d1f; --muted: #6b6c6e; --card: #ffffff; --line: rgba(0,0,0,.08); --accent: #1c1d1f; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #151618; --fg: #ececea; --muted: #9a9b9d; --card: #1f2023; --line: rgba(255,255,255,.08); --accent: #ececea; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { min-height: 100vh; background: var(--bg); color: var(--fg); font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+         padding: max(28px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 40px max(20px, env(safe-area-inset-left)); }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .brand { font-size: 13px; font-weight: 600; letter-spacing: .32em; text-transform: uppercase; }
+  header a { color: var(--muted); font-size: 13px; text-decoration: none; }
+  header a:hover { color: var(--fg); }
+  h1 { font-size: clamp(40px, 8vw, 76px); line-height: .95; letter-spacing: -.03em; margin: 72px 0 16px; text-wrap: balance; }
+  .lede { color: var(--muted); font-size: 17px; line-height: 1.55; max-width: 34em; margin: 0 0 48px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 20px; }
+  .card { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; color: inherit; text-decoration: none;
+          transition: transform .2s, box-shadow .2s; }
+  .card:hover, .card:focus-visible { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(0,0,0,.14); outline: none; }
+  .art { aspect-ratio: 16 / 9; background: linear-gradient(#f6f6f4, #d9d9d5); position: relative; }
+  @media (prefers-color-scheme: dark) { .art { background: linear-gradient(#2a2b2e, #1a1b1d); } }
+  .art svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .body { padding: 20px 22px 22px; }
+  .body h2 { margin: 0 0 6px; font-size: 20px; }
+  .body p { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tags span { font-size: 11.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+  .go { margin-top: 16px; font-size: 13px; font-weight: 600; }
+  footer { margin-top: 64px; color: var(--muted); font-size: 12.5px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand">Dream</span>
+    <a href="https://brigham4210.github.io/">← brigham4210.github.io</a>
+  </header>
+
+  <h1>Things I'd love to own, built in 3D.</h1>
+  <p class="lede">A small collection of interactive pieces. Each one runs right in the browser: drag to look around, scroll to zoom, and click parts to open them.</p>
+
+  <div class="grid">
+    <a class="card" href="Garage/">
+      <div class="art" aria-hidden="true">
+        <svg viewBox="0 0 320 180">
+          <rect x="0" y="118" width="320" height="62" fill="#000" opacity=".05"/>
+          <rect x="128" y="22" width="64" height="40" fill="#f3ead3" stroke="#222" stroke-width="2"/>
+          <path d="M134 50l10-8 9 5 12-9 10 6 11-4" stroke="#b3261e" stroke-width="1.6" fill="none"/>
+          <g transform="translate(46 128)">
+            <path d="M0 0v-22q0-6 8-8l14-3 12-18q3-4 9-4h44q7 0 10 5l12 17 12 2q8 2 8 9v22z" fill="#9aa714"/>
+            <path d="M84 -29l-7-17q-1-3-5-3H58v20z" fill="#1d1d1d"/>
+            <circle cx="28" cy="0" r="12" fill="#1a1a1a"/><circle cx="104" cy="0" r="12" fill="#1a1a1a"/>
+            <circle cx="28" cy="0" r="5" fill="#bbb"/><circle cx="104" cy="0" r="5" fill="#bbb"/>
+          </g>
+          <g transform="translate(166 128)">
+            <path d="M0 -4v-24h52v-34q0-5 5-5h30q6 0 9 5l14 22 30 4q10 2 10 12v20z" fill="#c09a66"/>
+            <path d="M60 -38v-22h24q4 0 6 4l10 18z" fill="#3a3f45"/>
+            <circle cx="30" cy="0" r="13" fill="#1a1a1a"/><circle cx="122" cy="0" r="13" fill="#1a1a1a"/>
+            <circle cx="30" cy="0" r="7" fill="#d8dadc"/><circle cx="122" cy="0" r="7" fill="#d8dadc"/>
+          </g>
+        </svg>
+      </div>
+      <div class="body">
+        <h2>Dream Garage</h2>
+        <p>A 3D showroom with a 1977 Leyland Mini 1000 and a lowered 1966 Chevrolet C10 stepside, parked side by side under a framed US road map.</p>
+        <div class="tags"><span>three.js</span><span>WebGL</span><span>Vanilla JS</span></div>
+        <div class="go">Enter the garage →</div>
+      </div>
+    </a>
+  </div>
+
+  <footer>Made by Brigham Chen · <a href="https://github.com/brigham4210/Dream">Source on GitHub</a></footer>
+</div>
+</body>
+</html>
