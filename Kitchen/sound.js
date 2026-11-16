@@ -32,6 +32,8 @@ window.makeKitchenSound = function () {
     griddle: { filters: [['highpass', 3200, 0.7]], gain: 0.14, crackle: true },
     bbq: { filters: [['highpass', 2800, 0.7]], gain: 0.16, crackle: true },
     bubble: { filters: [['lowpass', 420, 0.7]], gain: 0.4, crackle: true },
+    konro: { filters: [['highpass', 3000, 0.7]], gain: 0.13, crackle: true },
+    curry: { filters: [['lowpass', 460, 0.7]], gain: 0.4, crackle: true },
     boil: { filters: [['lowpass', 520, 0.7]], gain: 0.55, crackle: true },
   };
   function loop(name, level) {

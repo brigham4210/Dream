@@ -8,7 +8,7 @@
   html, body { margin: 0; height: 100%; overflow: hidden; background: #e9e9e6; color: #1c1d1f;
                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
   canvas { display: block; touch-action: none; cursor: grab; }
-  #head { position: fixed; left: 24px; top: 20px; }
+  #head { position: fixed; left: 24px; top: 20px; max-width: 46vw; }
   #head b { display: block; font-size: 13px; font-weight: 600; letter-spacing: .32em; text-transform: uppercase; }
   #head span { display: block; margin-top: 5px; font-size: 12px; letter-spacing: .06em; opacity: .55; }
   #head a { display: inline-block; margin-top: 10px; font-size: 12px; color: inherit; opacity: .6; text-decoration: none; }
@@ -38,7 +38,9 @@
 <script src="counter.js"></script>
 <script src="fridge.js"></script>
 <script src="appliances.js"></script>
-<script src="table.js"></script>
+<script src="bilao.js"></script>
+<script src="japanese.js"></script>
+<script src="thai.js"></script>
 <script src="bbq.js"></script>
 <script src="pantry.js"></script>
 <script src="rack.js"></script>
@@ -53,8 +55,8 @@
 </script>
 </head>
 <body>
-<div id="head"><b>My Dream Kitchen</b><span>Italian · French · Chinese · Filipino · Mexican · pupusas · Korean barbecue · hotpot</span><a href="../">‹ Dream</a></div>
-<div id="hint">Drag to look around · scroll to zoom<br>Click doors and drawers, knobs, the tap, lamps, appliances,<br>the wok, the grill, the hotpot, the pizza oven, a pupusa or a pan</div>
+<div id="head"><b>My Dream Kitchen</b><span>Italian · French · Chinese · Japanese · Thai · Filipino · Mexican · Korean</span><a href="../">‹ Dream</a></div>
+<div id="hint">Drag to look around · scroll to zoom<br>Click doors and drawers, knobs, the tap, lamps, appliances,<br>the wok, the grills, the hotpot, the pizza oven, the mortar, a pupusa or a pan</div>
 <div id="dock">
   <div id="card" hidden><div id="line"><b id="name"></b> <span id="note"></span></div></div>
   <div id="tabs"></div>

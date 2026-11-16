@@ -33,7 +33,7 @@ g.add(slab(-HX - 0.05, HX + 0.05, Z0 - 0.05, Z1 + 0.34, H, TOP, M.marble));
   fruit(0xf0c419, -0.06, 0.07, 0.03, 0.034, 1, 1.3); fruit(0xf0c419, 0.02, 0.075, -0.07, 0.034, 1, 1.3); fruit(0xf3cf2d, 0.0, 0.13, 0.0, 0.034, 1, 1.3);
   fruit(0xf08a1c, 0.07, 0.085, 0.03, 0.045); fruit(0xf08a1c, -0.04, 0.085, -0.05, 0.045); fruit(0x8db33a, 0.0, 0.08, 0.075, 0.04, 0.92); fruit(0xb5271e, -0.085, 0.1, -0.02, 0.038, 0.92); fruit(0x8db33a, 0.075, 0.12, -0.04, 0.038, 0.92); }
 // a loaf on an oak board, a few slices cut, and the knife
-{ const b = grp(0.42, TOP, 0.02); b.rotation.y = 0.22; box(-0.24, 0.24, 0, 0.022, -0.15, 0.15, M.oak, b); cyl(0.012, 0.03, M.black, -0.21, 0.011, -0.12, b, 16).rotation.x = 0;
+{ const b = grp(0.42, TOP, -0.27); b.rotation.y = 0.12; box(-0.24, 0.24, 0, 0.022, -0.15, 0.15, M.oak, b); cyl(0.012, 0.03, M.black, -0.21, 0.011, -0.12, b, 16).rotation.x = 0;
   const crust = std(0xa9682c, 0.8), crumb = std(0xf0dfbd, 0.9);
   const loaf = mk(new THREE.CapsuleGeometry(0.06, 0.16, 8, 24).rotateZ(Math.PI / 2), crust, b, -0.04, 0.07, -0.03); loaf.scale.set(1, 0.85, 1.1);
   for (let i = 0; i < 3; i++) { const s = grp(0.13 + i * 0.03, 0.022, -0.03 + i * 0.012, b); s.rotation.z = -1.1 - i * 0.12; const sl = mk(new THREE.CylinderGeometry(0.058, 0.058, 0.014, 24).rotateZ(Math.PI / 2), crumb, s, 0.008, 0.05, 0); sl.scale.set(1, 0.85, 1.1); mk(new THREE.TorusGeometry(0.058, 0.004, 6, 24).rotateY(Math.PI / 2), crust, s, 0.008, 0.05, 0).scale.set(1, 0.85, 1.1); }
