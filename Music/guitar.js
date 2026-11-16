@@ -1,14 +1,16 @@
-/* The acoustic guitar on its stand. build() adds it to whatever `scene` it is given: face towards +z, stand on y = 0, metres.
+/* The acoustic guitar, hung on the wall by its headstock. build() adds it to whatever `scene` it is given:
+   the wall is the plane z = 0, the guitar faces +z out into the room, metres; the floor is at y = 0.
    Each string plucks on its own; a click on the body strums all six. */
 (window.DREAM_MUSIC = window.DREAM_MUSIC || []).push({
-  name: 'Guitar', title: 'Acoustic guitar', line: 'Spruce top, mahogany back · click a string to pluck it, the body to strum',
-  at: [1.15, 1.7], turn: -0.35, view: { target: [0, 0.56, 0], cam: [0.5, 0.95, 3.1] },
+  name: 'Guitar', title: 'Acoustic guitar', line: 'On a wall hanger · click a string to pluck it, the body to strum',
+  at: [0.4, -2.758], turn: 0, view: { target: [0, 1.45, 0.1], cam: [0.45, 1.6, 2.5] },
   build({ THREE, scene, sound }) {
 const std = (color, roughness = 0.6, metalness = 0, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
 const gloss = (color, extra = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08, ...extra });
 const mahogany = gloss(0x5a2c16), rosewood = std(0x2a1710, 0.5), steel = std(0xdfe1e4, 0.2, 1), bone = std(0xf2ecdc, 0.4), black = std(0x141416, 0.5, 0.3), rubber = std(0x0c0c0d, 0.9);
 const root = new THREE.Group(); scene.add(root);
-const gtr = new THREE.Group(); gtr.position.set(0, 0.12, 0.02); gtr.rotation.x = -0.2; root.add(gtr);   // leaning back in the stand
+const HANG = 1.0;   // height of the bottom of the body; the back of the body clears the wall by a couple of centimetres
+const gtr = new THREE.Group(); gtr.position.set(0, HANG, 0.08); gtr.rotation.x = 0.03; root.add(gtr);
 const mk = (geo, mat, parent = gtr, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
 const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
 
@@ -46,7 +48,7 @@ const NECK0 = BODY - 0.012, FB0 = HOLE + 0.056, ZN = ZT + 0.004;
   mk(new THREE.BoxGeometry(0.045, 0.005, 0.007), bone, gtr, 0, NUT + 0.0025, ZN + 0.0045);
   const head = new THREE.Group(); head.position.set(0, NUT + 0.005, ZN - 0.004); head.rotation.x = -0.22; gtr.add(head);
   const hs = new THREE.Shape(); hs.moveTo(-0.024, 0); hs.lineTo(0.024, 0); hs.lineTo(0.036, 0.03); hs.lineTo(0.039, 0.165); hs.quadraticCurveTo(0, 0.185, -0.039, 0.165); hs.lineTo(-0.036, 0.03); hs.closePath();
-  mk(new THREE.ExtrudeGeometry(hs, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelOffset: -0.002, bevelSegments: 2 }).translate(0, 0, -0.012), gloss(0x1a0d08), head);
+  mk(new THREE.ExtrudeGeometry(hs, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelOffset: -0.002, bevelSegments: 2 }).translate(0, 0, -0.012), std(0x1a0d08, 0.4), head);
   for (let i = 0; i < 3; i++) for (const s of [1, -1]) { const y = 0.045 + i * 0.045;
     mk(new THREE.CylinderGeometry(0.0035, 0.0035, 0.014, 12).rotateX(Math.PI / 2), steel, head, s * 0.022, y, 0.006);
     mk(new THREE.CylinderGeometry(0.0025, 0.0025, 0.022, 8).rotateZ(Math.PI / 2), steel, head, s * 0.048, y, -0.008); mk(new THREE.SphereGeometry(0.0085, 12, 8).scale(0.6, 1, 1.2), steel, head, s * 0.061, y, -0.008); } }
@@ -65,11 +67,14 @@ OPEN.forEach((hz, i) => {
 const pluck = (s, when = 0) => { sound.pluck(s.hz, when); s.t = -when; s.live = true; };
 const strum = () => strings.forEach((s, i) => pluck(s, i * 0.035));
 
-/* ------------------------------------------------------------------ stand */
+/* ------------------------------------------------------------ wall hanger */
+// a walnut block screwed to the wall, with a padded yoke whose two prongs catch the headstock just above the nut
 const tube = (a, b, r = 0.009, mat = black) => { const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), m = mk(new THREE.CylinderGeometry(r, r, A.distanceTo(B), 10), mat, root); m.position.copy(A).add(B).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()); return m; };
-tube([0, 0.02, -0.3], [0, 0.72, -0.06]); tube([0, 0.3, -0.2], [-0.2, 0.02, 0.16]); tube([0, 0.3, -0.2], [0.2, 0.02, 0.16]);
-for (const s of [1, -1]) { tube([s * 0.06, 0.2, -0.165], [s * 0.1, 0.1, 0.12]); tube([s * 0.1, 0.1, 0.12], [s * 0.1, 0.16, 0.14], 0.012, rubber); }
-tube([-0.045, 0.72, -0.06], [0.045, 0.72, -0.06], 0.012, rubber);
+{ gtr.updateMatrix(); const yoke = new THREE.Vector3(0, NUT + 0.02, ZN - 0.01).applyMatrix4(gtr.matrix), Y = yoke.y - 0.006, Z = yoke.z;
+  mk(new THREE.BoxGeometry(0.075, 0.13, 0.022), gloss(0x4a2a16), root, 0, Y + 0.02, 0.011);
+  for (const s of [-1, 1]) mk(new THREE.CylinderGeometry(0.0035, 0.0035, 0.004, 10).rotateX(Math.PI / 2), steel, root, 0, Y + 0.02 + s * 0.045, 0.0235);
+  tube([0, Y, 0.022], [0, Y - 0.004, Z - 0.035], 0.006);
+  for (const s of [-1, 1]) { tube([0, Y - 0.004, Z - 0.035], [s * 0.032, Y, Z - 0.02], 0.005); tube([s * 0.032, Y, Z - 0.02], [s * 0.034, Y + 0.004, Z + 0.025], 0.008, rubber); } }
 
 root.traverse(o => { if (o.isMesh && o.material.visible) o.castShadow = o.receiveShadow = true; });
 function tick(dt) { for (const s of strings) if (s.live) { s.t += dt; if (s.t < 0) continue; const a = Math.exp(-s.t * 2.6); s.m.scale.x = s.r * (1 + 3.2 * a * (0.6 + 0.4 * Math.sin(s.t * 90))); if (a < 0.02) { s.m.scale.x = s.r; s.live = false; } } }
