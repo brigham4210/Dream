@@ -1,8 +1,9 @@
 /* The tailor: turns a line of clothes.js into a 3D garment on a hanger.
-   makeTailor(THREE) returns build(item) -> { root, rail, length }. root's origin is the centre of the wardrobe rail it hangs from;
-   the garment faces +z, x runs across the chest, metres. rail says which rail it belongs on: 'top', 'low' or 'long'.
-   Every garment is a soft slab cut to its front-view outline; seams, buttons, zips and pockets are drawn onto the cloth. */
-window.makeTailor = function (THREE) {
+   makeTailor(THREE, mergeVertices) returns build(item) -> { root, length }. root's origin is the centre of the rail it hangs from;
+   the garment faces +z, x runs across the chest, metres.
+   Every garment is cut to its front-view outline and padded: thin at the edges, full in the middle, falling in folds that deepen
+   towards the hem. Seams, buttons, zips and pockets are drawn onto the cloth. */
+window.makeTailor = function (THREE, mergeVertices) {
   const S = 900, TILE = 256, HOOK = 0.085;   // S: pixels per metre of drawn cloth
   const V = (x, y) => new THREE.Vector2(x, y);
   const rgb = c => { const n = parseInt(c.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
@@ -43,26 +44,46 @@ window.makeTailor = function (THREE) {
     g.putImageData(img, 0, 0);
     const tx = new THREE.CanvasTexture(c); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.repeat.set(1 / 0.62, 1 / 1.2); return tx;
   })();
-  const cloth = (map, colour, extra = {}) => new THREE.MeshPhysicalMaterial({ map, roughness: 0.92, sheen: 0.4, sheenRoughness: 0.65,
-    sheenColor: new THREE.Color(tone(colour, 0.35)), normalMap: FOLDS, normalScale: V(0.7, 0.7), ...extra });
+  const cloth = (map, colour, extra = {}) => new THREE.MeshPhysicalMaterial({ map, roughness: 1, sheen: 1, sheenRoughness: 0.45,
+    sheenColor: new THREE.Color(tone(colour, 0.45)), normalMap: FOLDS, normalScale: V(0.3, 0.3), side: THREE.DoubleSide, ...extra });
   const wood = new THREE.MeshStandardMaterial({ color: 0xb98a55, roughness: 0.5 });
   const steel = new THREE.MeshStandardMaterial({ color: 0xd9dbde, roughness: 0.25, metalness: 1 });
 
   /* ----------------------------------------------------------------- pieces */
-  // a slab: the outline pushed out to a thickness, with rolled edges. mats = [back, front]; the edges take the front cloth.
-  function slab(shape, depth, mats, bevel) {
-    const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelOffset: -bevel, bevelSegments: 3, curveSegments: 18 });
-    g.translate(0, 0, -depth / 2);
-    const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i), p.getY(i));   // cloth is laid on flat, in metres
-    if (Array.isArray(mats)) { const n = g.groups[0].count; g.clearGroups(); g.addGroup(0, n / 2, 0); g.addGroup(n / 2, n / 2, 1); g.addGroup(n, p.count - n, 1); }
+  // Soft cloth: a front and a back sheet cut to their outlines, sewn together at the edge. Each sheet swells from nothing at its edge
+  // to thickness T over a distance r, and the whole piece is carried in and out by fold(x, y). mats = [back, front] or one material.
+  function soft(front, back, T, mats, { z0 = 0, r = Math.max(0.02, T * 2), cols = 14, row = 0.007, fold = () => 0 } = {}) {
+    const pos = [], uv = [], idx = [];
+    const sheet = (shape, sgn) => {
+      const pts = shape.getPoints(16).map(p => [p.x, p.y]), n = pts.length; let y0 = Infinity, y1 = -Infinity; for (const p of pts) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+      const cut = y => { const xs = []; for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n]; if ((a[1] > y) !== (b[1] > y)) xs.push(a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0])); }
+        xs.sort((p, q) => p - q); const out = []; for (let i = 0; i + 1 < xs.length; i += 2) if (xs[i + 1] - xs[i] > 1e-5) out.push([xs[i], xs[i + 1]]); return out; };
+      const edge = (x, y) => { let m = Infinity; for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy; if (!l) continue;
+        const t = Math.min(1, Math.max(0, ((x - a[0]) * dx + (y - a[1]) * dy) / l)), ex = x - a[0] - t * dx, ey = y - a[1] - t * dy; m = Math.min(m, ex * ex + ey * ey); } return Math.sqrt(m); };
+      const line = (a, b, y) => { const out = []; for (let i = 0; i <= cols; i++) { const x = a + (b - a) * i / cols, u = Math.min(1, edge(x, y) / r), f = fold(x, y); pos.push(x, y + 0.55 * f, z0 + f + sgn * T * Math.sqrt(1 - (1 - u) * (1 - u))); uv.push(x, y); out.push(pos.length / 3 - 1); } return out; };
+      const rows = Math.max(4, Math.ceil((y1 - y0) / row)); let prev = null, py = 0;
+      for (let j = 0; j <= rows; j++) {
+        const y = Math.min(y1 - 1e-4, Math.max(y0 + 1e-4, y0 + (y1 - y0) * j / rows)), cur = cut(y);
+        if (prev) { let pairs = [];
+          if (prev.length === cur.length) pairs = prev.map((p, k) => [p, cur[k]]);
+          else { const up = cur.length > prev.length, many = up ? cur : prev, few = up ? prev : cur;   // the outline forks here (a neckline, a pair of legs)
+            for (const m of many) for (const f of few) { const a = Math.max(m[0], f[0]), b = Math.min(m[1], f[1]); if (b > a) pairs.push(up ? [[a, b], m] : [m, [a, b]]); } }
+          for (const [p, c] of pairs) { const A = line(p[0], p[1], py), B = line(c[0], c[1], y);
+            for (let i = 0; i < cols; i++) sgn > 0 ? idx.push(A[i], A[i + 1], B[i], A[i + 1], B[i + 1], B[i]) : idx.push(A[i], B[i], A[i + 1], A[i + 1], B[i], B[i + 1]); } }
+        prev = cur; py = y;
+      }
+    };
+    sheet(front, 1); const nf = idx.length; sheet(back, -1);
+    let g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));   // cloth is laid on flat, in metres
+    g.setIndex(idx); if (Array.isArray(mats)) { g.addGroup(0, nf, 1); g.addGroup(nf, idx.length - nf, 0); }
+    g = mergeVertices(g, 1e-5); g.computeVertexNormals();
     return new THREE.Mesh(g, mats);
   }
+  const drape = (amp, wl, L, ph) => (x, y) => { const t = Math.min(1, Math.max(0, (-y - 0.1) / (L - 0.1))), k = 2 * Math.PI / wl;
+    return 1.9 * amp * (0.1 + 0.9 * t * t * (3 - 2 * t)) * (0.62 * Math.sin(k * x + ph + 2.2 * y) + 0.38 * Math.sin(k * 1.75 * x + ph * 2.3 - 3.1 * y)); };
+  function slab(shape, depth, mat, bevel) { return new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelOffset: -bevel, bevelSegments: 2, curveSegments: 14 }).translate(0, 0, -depth / 2), mat); }
   const poly = pts => new THREE.Shape(pts.map(p => V(p[0], p[1])));
-  function flat(w, h, x, y, z, mat, back) {
-    const g = new THREE.PlaneGeometry(w, h); if (back) g.rotateY(Math.PI); g.translate(x, y, z);
-    const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i), p.getY(i));
-    return new THREE.Mesh(g, mat);
-  }
   // the drawn front: a canvas in garment metres (x right, y up), already filled with the cloth
   function panel(tile, XW, y0, y1, draw) {
     const c = canvas(Math.round(2 * XW * S), Math.round((y1 - y0) * S)), g = c.getContext('2d');
@@ -90,62 +111,57 @@ window.makeTailor = function (THREE) {
     const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.0028, 0.0028, yc - 0.02 - y0, 8), steel); stem.position.y = (yc - 0.02 + y0) / 2; body.add(stem);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.0028, 8, 30, Math.PI * 1.45).rotateZ(-Math.PI / 2), steel); ring.position.y = yc; body.add(ring);
   }
-  const finish = (root, rail, length) => { root.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); return { root, rail, length }; };
+  const finish = (root, length) => { root.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); return { root, length }; };
 
   /* ------------------------------------------------------------------- tops */
   // y = 0 at the point where neck meets shoulder; the garment hangs down from there.
   function top(it, p, paint, extras) {
-    const o = { NW: 0.085, SH: 0.235, drop: 0.045, CH: 0.26, AH: 0.24, HEM: 0.25, L: 0.7, ND: 0.07, neck: 'crew', rise: 0.012, depth: 0.02, bevel: 0.01,
-      SL: 0.62, SA: 0.2, CUFF: 0.115, cuff: 0, tail: 0, blouse: 0, fabric: 'jersey', rib: 0, mat: {}, rail: 'top', ...p };
+    const o = { NW: 0.085, SH: 0.235, drop: 0.045, CH: 0.26, AH: 0.24, HEM: 0.25, L: 0.7, ND: 0.07, neck: 'crew', rise: 0.012, T: 0.012, fold: [0.009, 0.17],
+      SL: 0.62, SA: 0.2, CUFF: 0.115, cuff: 0, tail: 0, blouse: 0, fabric: 'jersey', rib: 0, mat: {}, ...p };
     const c = it.colour, tile = weave(c, it.fabric || o.fabric), fab = cloth(tileTex(tile), c, o.mat);
     const ribTile = weave(tone(c, o.rib), 'rib'), ribMat = cloth(tileTex(ribTile), c, o.mat);
     const root = new THREE.Group(), body = new THREE.Group(); body.position.y = -HOOK; root.add(body);
     const neck = g => { g.moveTo(-o.NW, 0); if (o.neck === 'v') { g.lineTo(0, -o.ND); g.lineTo(o.NW, 0); } else if (o.neck === 'crew') g.bezierCurveTo(-o.NW, -o.ND * 1.33, o.NW, -o.ND * 1.33, o.NW, 0); else g.lineTo(o.NW, 0); };
-
-    const sh = new THREE.Shape(); neck(sh); sh.lineTo(o.SH, -o.drop); sh.lineTo(o.CH, -o.AH);
-    if (o.blouse) { sh.lineTo(o.CH + 0.006, -o.L + o.blouse + 0.05); sh.quadraticCurveTo(o.CH + 0.006, -o.L + o.blouse, o.HEM, -o.L + o.blouse - 0.012); }
-    sh.lineTo(o.HEM, -o.L + o.tail);
-    if (o.tail) sh.bezierCurveTo(o.HEM * 0.6, -o.L - o.tail * 0.3, -o.HEM * 0.6, -o.L - o.tail * 0.3, -o.HEM, -o.L + o.tail); else sh.lineTo(-o.HEM, -o.L);
-    if (o.blouse) { sh.lineTo(-o.HEM, -o.L + o.blouse - 0.012); sh.quadraticCurveTo(-o.CH - 0.006, -o.L + o.blouse, -o.CH - 0.006, -o.L + o.blouse + 0.05); }
-    sh.lineTo(-o.CH, -o.AH); sh.lineTo(-o.SH, -o.drop); sh.closePath();
+    const outline = back => { const sh = new THREE.Shape();   // the back is cut higher at the neck than the front
+      if (back && o.neck !== 'straight') { sh.moveTo(-o.NW, 0); sh.lineTo(-o.NW + 0.004, o.rise); sh.lineTo(o.NW - 0.004, o.rise); sh.lineTo(o.NW, 0); } else neck(sh);
+      sh.lineTo(o.SH, -o.drop); sh.lineTo(o.CH, -o.AH);
+      if (o.blouse) { sh.lineTo(o.CH + 0.006, -o.L + o.blouse + 0.05); sh.quadraticCurveTo(o.CH + 0.006, -o.L + o.blouse, o.HEM, -o.L + o.blouse - 0.012); }
+      sh.lineTo(o.HEM, -o.L + o.tail);
+      if (o.tail) sh.bezierCurveTo(o.HEM * 0.6, -o.L - o.tail * 0.3, -o.HEM * 0.6, -o.L - o.tail * 0.3, -o.HEM, -o.L + o.tail); else sh.lineTo(-o.HEM, -o.L);
+      if (o.blouse) { sh.lineTo(-o.HEM, -o.L + o.blouse - 0.012); sh.quadraticCurveTo(-o.CH - 0.006, -o.L + o.blouse, -o.CH - 0.006, -o.L + o.blouse + 0.05); }
+      sh.lineTo(-o.CH, -o.AH); sh.lineTo(-o.SH, -o.drop); sh.closePath(); return sh; };
 
     const XW = Math.max(o.SH, o.CH, o.HEM) + 0.04, k = { c, neck, tile, ribTile, ink: isDark(c) ? 'rgba(255,255,255,.17)' : 'rgba(0,0,0,.26)', XW };
-    const front = cloth(panel(tile, XW, -o.L - 0.06, 0.05, g => paint(g, o, k)), c, o.mat);
-    body.add(slab(sh, o.depth, [fab, front], o.bevel));
-    const ZF = o.depth / 2 + o.bevel;
-
-    if (o.neck !== 'straight') {   // the back of the neck, seen through the neckline
-      const w = 2 * (o.NW + 0.012), h = o.ND + 0.035 + o.rise, y = o.rise - h / 2;
-      const inside = new THREE.MeshStandardMaterial({ map: fab.map, color: o.lining || 0xc9c9c9, roughness: 1 });
-      body.add(flat(w, h, 0, y, -ZF + 0.003, inside), flat(w, h, 0, y, -ZF + 0.002, fab, true));
-      if (o.label) body.add(flat(0.03, 0.011, 0, o.rise - 0.014, -ZF + 0.0035, new THREE.MeshStandardMaterial({ color: isDark(c) ? 0xdedbd2 : 0x2a2a2c, roughness: 0.8 })));
-    }
+    const front = cloth(panel(tile, XW, -o.L - 0.06, 0.05, g => paint(g, o, k)), c, o.mat), fold = drape(o.fold[0], o.fold[1], o.L, rnd() * 6.28);
+    body.add(soft(outline(false), outline(true), o.T, [fab, front], { fold, cols: 44 }));
+    const piece = (shape, th, z0, mat, r = 0.008) => body.add(soft(shape, shape, th, mat, { z0, r, fold, row: 0.005 }));
+    const pair = (pts, th, z0, mat) => { for (const s of [1, -1]) piece(typeof pts === 'function' ? pts(s) : poly(mirror(pts, s)), th, z0, mat); };
+    if (o.lining) piece(poly([[-o.NW + 0.015, -0.03], [o.NW - 0.015, -0.03], [o.NW - 0.015, -o.ND - 0.03], [-o.NW + 0.015, -o.ND - 0.03]]), 0.0015, -0.7 * o.T, new THREE.MeshStandardMaterial({ color: o.lining, roughness: 0.5 }), 0.004);
     for (const s of [1, -1]) {   // sleeves hang from the shoulder, a little behind the body
       const d = [Math.sin(o.SA), -Math.cos(o.SA)], P1 = [o.SH - 0.004, -o.drop + 0.002], P2 = [o.CH - 0.035, -o.AH - 0.015];
       const O = [P1[0] + d[0] * o.SL, P1[1] + d[1] * o.SL], I = [O[0] - Math.cos(o.SA) * o.CUFF, O[1] - Math.sin(o.SA) * o.CUFF];
-      body.add(slab(poly(mirror([P1, O, I, P2], s)), o.depth - 0.006, fab, o.bevel));
+      piece(poly(mirror([P1, O, I, P2], s)), o.T * 0.85, -0.003, fab, 0.03);
       if (o.cuff) { const il = Math.hypot(P2[0] - I[0], P2[1] - I[1]), Oc = [O[0] - d[0] * o.cuff, O[1] - d[1] * o.cuff], Ic = [I[0] + (P2[0] - I[0]) / il * o.cuff, I[1] + (P2[1] - I[1]) / il * o.cuff];
-        body.add(slab(poly(mirror([Oc, O, I, Ic], s)), o.depth - 0.002, o.rib ? ribMat : fab, o.bevel)); }
+        piece(poly(mirror([Oc, O, I, Ic], s)), o.T * 0.85 + 0.003, -0.003, o.rib ? ribMat : fab, 0.02); }
     }
-    const pair = (pts, depth, z, mat, bevel = 0.0025) => { for (const s of [1, -1]) { const m = slab(typeof pts === 'function' ? pts(s) : poly(mirror(pts, s)), depth, mat, bevel); m.position.z = z; body.add(m); } };
-    if (extras) extras({ body, o, fab, ribMat, ZF, pair, c });
+    if (extras) extras({ body, o, fab, ribMat, ZF: o.T * 0.55, piece, pair, c });
     hanger(body, o.SH - 0.03, o.drop);
-    return finish(root, o.rail, HOOK + o.L);
+    return finish(root, HOOK + o.L);
   }
   // shared bits of drawing
   const neckBand = (g, o, k, w, style) => { g.lineCap = 'butt'; for (const [lw, st] of [[w + 0.005, k.ink], [w, style]]) { g.beginPath(); k.neck(g); g.strokeStyle = st; g.lineWidth = lw; g.stroke(); } g.lineCap = 'round'; };
   const hemBand = (g, o, k, h) => { g.fillStyle = pat(g, k.ribTile); g.fillRect(-k.XW, -o.L - 0.06, 2 * k.XW, h + 0.06); line(g, [[-k.XW, -o.L + h], [k.XW, -o.L + h]], k.ink, 0.002); };
-  const collar = (x) => ({ pair, o, fab, ZF }) => pair([[o.NW + 0.002, x.top], [o.NW + x.out, -0.008], [x.px, -o.ND - x.py], [0.007, -o.ND + 0.012]], 0.004, ZF + 0.001, fab);
+  const collar = (x) => ({ pair, o, fab, ZF }) => pair([[o.NW + 0.002, x.top], [o.NW + x.out, -0.008], [x.px, -o.ND - x.py], [0.007, -o.ND + 0.012]], 0.0035, ZF, fab);
   const bandCollar = mat => ({ pair, o, fab, ribMat, ZF }) => pair(s => { const sh = new THREE.Shape(); sh.moveTo(s * 0.004, -o.ND + 0.014); sh.quadraticCurveTo(s * o.NW * 0.95, -o.ND + 0.02, s * (o.NW - 0.006), 0.032);
-    sh.lineTo(s * (o.NW + 0.03), 0.012); sh.quadraticCurveTo(s * (o.NW + 0.02), -o.ND - 0.03, s * 0.004, -o.ND - 0.03); return sh; }, 0.006, ZF, mat === 'rib' ? ribMat : fab, 0.004);
+    sh.lineTo(s * (o.NW + 0.03), 0.012); sh.quadraticCurveTo(s * (o.NW + 0.02), -o.ND - 0.03, s * 0.004, -o.ND - 0.03); return sh; }, 0.006, ZF, mat === 'rib' ? ribMat : fab);
 
   const KINDS = {
-    tee: it => top(it, { SL: 0.21, SA: 0.5, CUFF: 0.17, label: true, ND: 0.075 }, (g, o, k) => {
+    tee: it => top(it, { SL: 0.21, SA: 0.5, CUFF: 0.17, ND: 0.075, T: 0.011 }, (g, o, k) => {
       neckBand(g, o, k, 0.04, tone(k.c, isDark(k.c) ? 0.07 : -0.05));
       stitch(g, [[-o.HEM, -o.L + 0.022], [o.HEM, -o.L + 0.022]], k.ink);
     }),
 
-    shirt: it => top(it, { fabric: it.denim ? 'denim' : 'poplin', NW: 0.075, SH: 0.23, L: 0.76, tail: 0.04, neck: 'v', rise: 0.036, depth: 0.016, cuff: 0.06, CUFF: 0.11 }, (g, o, k) => {
+    shirt: it => top(it, { fabric: it.denim ? 'denim' : 'poplin', NW: 0.075, SH: 0.23, L: 0.76, tail: 0.04, neck: 'v', rise: 0.036, T: 0.01, fold: [0.008, 0.15], cuff: 0.06, CUFF: 0.11 }, (g, o, k) => {
       const th = it.denim ? '#e0b877' : k.ink, btn = it.denim ? '#f0ede6' : isDark(k.c) ? '#3a3a3e' : '#fbfaf6';
       for (const x of [-0.017, 0.017]) { line(g, [[x, -o.ND + 0.02], [x, -o.L - 0.05]], k.ink); if (it.denim) stitch(g, [[x * 0.72, -o.ND + 0.02], [x * 0.72, -o.L - 0.05]], th); }
       for (let y = -o.ND - 0.04; y > -o.L + 0.06; y -= 0.088) button(g, 0, y, 0.0058, btn, it.denim ? '#b9bcc0' : tone(btn, -0.25));
@@ -157,16 +173,16 @@ window.makeTailor = function (THREE) {
       } else { P(g, [[0.07, -0.205], [0.17, -0.205], [0.17, -0.3], [0.12, -0.322], [0.07, -0.3]], true); g.strokeStyle = k.ink; g.lineWidth = 0.0016; g.stroke(); }
     }, collar({ top: 0.03, out: 0.04, px: 0.082, py: 0.03 })),
 
-    turtleneck: it => top(it, { fabric: 'rib', neck: 'straight', NW: 0.08, L: 0.68, rib: -0.05, cuff: 0.06, rail: 'low' }, (g, o, k) => hemBand(g, o, k, 0.055),
-      ({ body, o, ribMat }) => { body.add(slab(poly([[-o.NW - 0.008, -0.02], [o.NW + 0.008, -0.02], [o.NW + 0.004, 0.1], [-o.NW - 0.004, 0.1]]), o.depth * 0.9, ribMat, 0.012));
-        const roll = slab(poly([[-o.NW - 0.012, 0.012], [o.NW + 0.012, 0.012], [o.NW + 0.008, 0.102], [-o.NW - 0.008, 0.102]]), o.depth * 0.9 + 0.008, ribMat, 0.013); body.add(roll); }),
+    turtleneck: it => top(it, { fabric: 'rib', neck: 'straight', NW: 0.08, L: 0.68, rib: -0.05, cuff: 0.06, T: 0.015, fold: [0.007, 0.2] }, (g, o, k) => hemBand(g, o, k, 0.055),
+      ({ o, ribMat, piece }) => { piece(poly([[-o.NW - 0.008, -0.02], [o.NW + 0.008, -0.02], [o.NW + 0.004, 0.1], [-o.NW - 0.004, 0.1]]), o.T * 0.9, 0, ribMat, 0.02);
+        piece(poly([[-o.NW - 0.012, 0.012], [o.NW + 0.012, 0.012], [o.NW + 0.008, 0.102], [-o.NW - 0.008, 0.102]]), o.T * 0.9 + 0.006, 0, ribMat, 0.02); }),
 
-    sweatshirt: it => top(it, { fabric: 'fleece', L: 0.68, CH: 0.27, HEM: 0.24, blouse: 0.07, rib: -0.1, cuff: 0.065, depth: 0.026, label: true, rail: 'low' }, (g, o, k) => {
+    sweatshirt: it => top(it, { fabric: 'fleece', L: 0.68, CH: 0.27, HEM: 0.24, blouse: 0.07, rib: -0.1, cuff: 0.065, T: 0.021, fold: [0.008, 0.22] }, (g, o, k) => {
       neckBand(g, o, k, 0.05, pat(g, k.ribTile)); hemBand(g, o, k, 0.065);
       const y = -o.ND - 0.027; stitch(g, [[-0.024, y], [0, y - 0.04], [0.024, y]], k.ink);
     }),
 
-    sweater: it => top(it, { fabric: 'knit', L: 0.68, CH: 0.265, HEM: 0.245, blouse: 0.065, rib: -0.06, cuff: 0.065, depth: 0.028, rail: 'low' }, (g, o, k) => {
+    sweater: it => top(it, { fabric: 'knit', L: 0.68, CH: 0.265, HEM: 0.245, blouse: 0.065, rib: -0.06, cuff: 0.065, T: 0.024, fold: [0.007, 0.24] }, (g, o, k) => {
       for (const x0 of [-0.13, 0, 0.13]) {   // cables
         for (const dx of [-0.026, 0.026]) { line(g, [[x0 + dx, 0], [x0 + dx, -o.L]], 'rgba(0,0,0,.2)', 0.004); line(g, [[x0 + dx + 0.004, 0], [x0 + dx + 0.004, -o.L]], 'rgba(255,255,255,.3)', 0.003); }
         for (const ph of [0, Math.PI]) { const pts = []; for (let y = 0; y > -o.L; y -= 0.004) pts.push([x0 + 0.013 * Math.sin(y / 0.07 * 2 * Math.PI + ph), y]);
@@ -175,20 +191,20 @@ window.makeTailor = function (THREE) {
       neckBand(g, o, k, 0.05, pat(g, k.ribTile)); hemBand(g, o, k, 0.065);
     }),
 
-    hoodie: it => top(it, { fabric: 'fleece', L: 0.69, CH: 0.275, HEM: 0.245, blouse: 0.07, rib: -0.08, cuff: 0.065, depth: 0.028, ND: 0.085, rail: 'low' }, (g, o, k) => {
+    hoodie: it => top(it, { fabric: 'fleece', L: 0.69, CH: 0.275, HEM: 0.245, blouse: 0.07, rib: -0.08, cuff: 0.065, T: 0.023, fold: [0.008, 0.22], ND: 0.085 }, (g, o, k) => {
       hemBand(g, o, k, 0.065);
       const pk = [[-0.115, -0.42], [0.115, -0.42], [0.172, -0.55], [0.172, -o.L + 0.066], [-0.172, -o.L + 0.066], [-0.172, -0.55]];
       fill(g, pk, tone(k.c, -0.04)); P(g, pk, true); g.strokeStyle = k.ink; g.lineWidth = 0.002; g.stroke(); stitch(g, [pk[5], pk[0], pk[1], pk[2]].map(q => [q[0] * 0.95, q[1] - 0.006]), k.ink);
       for (const s of [1, -1]) { dot(g, s * 0.034, -o.ND - 0.05, 0.005, '#b9bcc0'); dot(g, s * 0.034, -o.ND - 0.05, 0.0025, '#333');
         line(g, [[s * 0.034, -o.ND - 0.05], [s * 0.04, -o.ND - 0.15], [s * 0.036, -o.ND - 0.25]], tone(k.c, 0.5), 0.005); line(g, [[s * 0.036, -o.ND - 0.25], [s * 0.036, -o.ND - 0.268]], '#b9bcc0', 0.0055); }
-    }, ({ body, o, fab, ZF, pair }) => {
+    }, ({ o, fab, ZF, piece, pair }) => {
       const hood = new THREE.Shape(); hood.moveTo(-0.14, -0.06); hood.bezierCurveTo(-0.155, 0.06, -0.075, 0.1, 0, 0.1); hood.bezierCurveTo(0.075, 0.1, 0.155, 0.06, 0.14, -0.06); hood.lineTo(0.11, -0.22); hood.lineTo(-0.11, -0.22);
-      const back = slab(hood, 0.02, fab, 0.012); back.position.z = -ZF - 0.006; body.add(back);
+      piece(hood, 0.014, -o.T - 0.01, fab, 0.03);
       pair(s => { const sh = new THREE.Shape(); sh.moveTo(s * 0.006, -o.ND - 0.03); sh.quadraticCurveTo(s * 0.075, -o.ND + 0.015, s * (o.NW + 0.004), 0.05);
-        sh.lineTo(s * (o.NW + 0.058), 0.02); sh.quadraticCurveTo(s * 0.115, -o.ND - 0.03, s * 0.006, -o.ND - 0.085); return sh; }, 0.008, ZF + 0.001, fab, 0.005);
+        sh.lineTo(s * (o.NW + 0.058), 0.02); sh.quadraticCurveTo(s * 0.115, -o.ND - 0.03, s * 0.006, -o.ND - 0.085); return sh; }, 0.008, ZF, fab);
     }),
 
-    denimJacket: it => top(it, { fabric: 'denim', NW: 0.08, SH: 0.24, CH: 0.275, HEM: 0.255, L: 0.64, neck: 'v', ND: 0.075, rise: 0.04, depth: 0.026, cuff: 0.055, SA: 0.22, CUFF: 0.125, rail: 'low' }, (g, o, k) => {
+    denimJacket: it => top(it, { fabric: 'denim', NW: 0.08, SH: 0.24, CH: 0.275, HEM: 0.255, L: 0.64, neck: 'v', ND: 0.075, rise: 0.04, T: 0.018, fold: [0.005, 0.25], cuff: 0.055, SA: 0.22, CUFF: 0.125 }, (g, o, k) => {
       const th = '#d49a50', cu = '#b0703a', wb = -o.L + 0.05;
       for (const x of [-0.022, 0.022]) { line(g, [[x, -o.ND + 0.03], [x, -o.L - 0.06]], k.ink, 0.002); stitch(g, [[x * 0.72, -o.ND + 0.03], [x * 0.72, -o.L - 0.06]], th); }
       line(g, [[-k.XW, wb], [k.XW, wb]], k.ink, 0.002); stitch(g, [[-k.XW, wb - 0.006], [k.XW, wb - 0.006]], th); stitch(g, [[-k.XW, -o.L + 0.012], [k.XW, -o.L + 0.012]], th);
@@ -201,8 +217,8 @@ window.makeTailor = function (THREE) {
       for (let y = -o.ND - 0.035; y > wb + 0.03; y -= 0.098) button(g, 0, y, 0.0085, cu, '#6e4322'); button(g, 0, -o.L + 0.026, 0.0085, cu, '#6e4322');
     }, collar({ top: 0.036, out: 0.056, px: 0.108, py: 0.045 })),
 
-    leatherJacket: it => top(it, { fabric: 'leather', NW: 0.08, SH: 0.24, CH: 0.275, HEM: 0.255, L: 0.64, ND: 0.05, rise: 0.03, depth: 0.03, bevel: 0.012, cuff: 0.05, SA: 0.22, CUFF: 0.125, rail: 'low',
-      mat: { roughness: 0.4, sheen: 0, clearcoat: 0.3, clearcoatRoughness: 0.45, normalScale: V(0.5, 0.5) } }, (g, o, k) => {
+    leatherJacket: it => top(it, { fabric: 'leather', NW: 0.08, SH: 0.24, CH: 0.275, HEM: 0.255, L: 0.64, ND: 0.05, rise: 0.03, T: 0.02, fold: [0.004, 0.28], cuff: 0.05, SA: 0.22, CUFF: 0.125,
+      mat: { roughness: 0.46, sheen: 0, clearcoat: 0.25, clearcoatRoughness: 0.5, normalScale: V(0.5, 0.5) } }, (g, o, k) => {
       const seam = pts => { line(g, pts, 'rgba(0,0,0,.6)', 0.0024); line(g, pts.map(q => [q[0] + 0.0022, q[1] - 0.0012]), 'rgba(255,255,255,.14)', 0.0014); };
       seam([[-k.XW, -o.L + 0.045], [k.XW, -o.L + 0.045]]);
       for (const s of [1, -1]) { seam([[s * 0.012, -0.13], [s * 0.3, -0.115]]); seam([[s * 0.125, -0.125], [s * 0.118, -o.L + 0.045]]);
@@ -211,19 +227,19 @@ window.makeTailor = function (THREE) {
       button(g, 0.03, -o.L + 0.022, 0.006, '#c9ccd0', '#77797c');
     }, bandCollar()),
 
-    bomber: it => top(it, { fabric: 'nylon', NW: 0.082, SH: 0.245, CH: 0.29, HEM: 0.235, L: 0.64, ND: 0.055, rise: 0.03, depth: 0.036, bevel: 0.015, blouse: 0.075, rib: -0.3, cuff: 0.065, SA: 0.24, CUFF: 0.14, rail: 'low',
-      mat: { roughness: 0.55, sheen: 0.25, normalScale: V(1, 1) } }, (g, o, k) => {
+    bomber: it => top(it, { fabric: 'nylon', NW: 0.082, SH: 0.245, CH: 0.29, HEM: 0.235, L: 0.64, ND: 0.055, rise: 0.03, T: 0.03, fold: [0.007, 0.2], blouse: 0.075, rib: -0.3, cuff: 0.065, SA: 0.24, CUFF: 0.14,
+      mat: { roughness: 0.6, sheen: 0.4, normalScale: V(0.8, 0.8) } }, (g, o, k) => {
       hemBand(g, o, k, 0.065); zip(g, [[0, -o.ND + 0.01], [0, -o.L + 0.065]]);
       for (const s of [1, -1]) { const w = [[s * 0.1, -0.52], [s * 0.165, -0.39]]; line(g, w, tone(k.c, -0.3), 0.012); stitch(g, w.map(q => [q[0] + s * 0.011, q[1] - 0.004]), k.ink); button(g, s * 0.14, -0.455, 0.0055, tone(k.c, -0.35), '#22241a');
         stitch(g, [[s * 0.012, -0.03], [s * 0.012, -o.L + 0.07]], k.ink); }
     }, bandCollar('rib')),
 
-    coat: it => top(it, { fabric: 'wool', NW: 0.085, SH: 0.245, CH: 0.28, AH: 0.25, HEM: 0.29, L: 1.05, neck: 'v', ND: 0.3, rise: 0.035, depth: 0.028, bevel: 0.012, SL: 0.64, SA: 0.17, CUFF: 0.13, lining: 0x4a3a2c, rail: 'long' }, (g, o, k) => {
+    coat: it => top(it, { fabric: 'wool', NW: 0.085, SH: 0.245, CH: 0.28, AH: 0.25, HEM: 0.29, L: 1.05, neck: 'v', ND: 0.3, rise: 0.035, T: 0.021, fold: [0.009, 0.26], SL: 0.64, SA: 0.17, CUFF: 0.13, lining: 0x4a3a2c }, (g, o, k) => {
       line(g, [[0.004, -o.ND], [0.03, -o.ND - 0.05], [0.03, -o.L - 0.06]], k.ink, 0.0022);
       for (const y of [-o.ND - 0.05, -o.ND - 0.2, -o.ND - 0.35]) button(g, 0, y, 0.0115, '#4a3524', '#2a1d13');
       for (const s of [1, -1]) { const fl = mirror([[0.09, -0.62], [0.225, -0.62], [0.225, -0.67], [0.09, -0.67]], s); fill(g, fl, tone(k.c, -0.05)); P(g, fl, true); g.strokeStyle = k.ink; g.lineWidth = 0.002; g.stroke(); }
       line(g, [[0.09, -0.285], [0.17, -0.275]], tone(k.c, -0.22), 0.009);
-    }, ({ pair, o, fab, ZF }) => pair([[o.NW + 0.004, 0.024], [o.NW + 0.06, -0.012], [0.132, -0.088], [0.09, -0.12], [0.122, -0.16], [0.008, -o.ND + 0.006]], 0.005, ZF + 0.001, fab, 0.003)),
+    }, ({ pair, o, fab, ZF }) => pair([[o.NW + 0.004, 0.024], [o.NW + 0.06, -0.012], [0.132, -0.088], [0.09, -0.12], [0.122, -0.16], [0.008, -o.ND + 0.006]], 0.0045, ZF, fab)),
 
     jeans: it => pants(it, { fabric: 'denim', HO: 0.212, HI: 0.03 }, (g, o, k) => {
       const th = '#d49a50';
@@ -254,17 +270,17 @@ window.makeTailor = function (THREE) {
     for (const x of [-0.17, -0.075, 0.075, 0.17]) { fill(g, [[x - 0.006, 0.01], [x + 0.006, 0.01], [x + 0.006, -0.05], [x - 0.006, -0.05]], tone(k.c, -0.1)); P(g, [[x - 0.006, 0.01], [x - 0.006, -0.05], [x + 0.006, -0.05], [x + 0.006, 0.01]]); g.strokeStyle = k.ink; g.lineWidth = 0.0014; g.stroke(); }
   }
   function pants(it, p, paint) {
-    const o = { W: 0.19, HIP: 0.232, RISE: 0.27, L: 1.02, HO: 0.21, HI: 0.028, depth: 0.018, bevel: 0.009, fabric: 'twill', ...p }, DROP = HOOK + 0.05;
+    const o = { W: 0.19, HIP: 0.232, RISE: 0.27, L: 1.02, HO: 0.21, HI: 0.028, T: 0.012, fold: [0.005, 0.2], fabric: 'twill', ...p }, DROP = HOOK + 0.05;
     const c = it.colour, tile = weave(c, o.fabric), fab = cloth(tileTex(tile), c);
     const root = new THREE.Group(), body = new THREE.Group(); body.position.y = -DROP; root.add(body);
     const sh = new THREE.Shape(); sh.moveTo(-o.W, 0); sh.lineTo(o.W, 0); sh.quadraticCurveTo(o.HIP + 0.004, -0.08, o.HIP, -0.2); sh.lineTo(o.HO, -o.L); sh.lineTo(o.HI, -o.L);
     sh.lineTo(0.007, -o.RISE); sh.lineTo(-0.007, -o.RISE); sh.lineTo(-o.HI, -o.L); sh.lineTo(-o.HO, -o.L); sh.lineTo(-o.HIP, -0.2); sh.quadraticCurveTo(-o.HIP - 0.004, -0.08, -o.W, 0);
     const XW = o.HIP + 0.04, k = { c, tile, XW, ink: isDark(c) ? 'rgba(255,255,255,.17)' : 'rgba(0,0,0,.26)' };
-    body.add(slab(sh, o.depth, [fab, cloth(panel(tile, XW, -o.L - 0.04, 0.03, g => paint(g, o, k)), c)], o.bevel));
+    body.add(soft(sh, sh, o.T, [fab, cloth(panel(tile, XW, -o.L - 0.04, 0.03, g => paint(g, o, k)), c)], { cols: 40, fold: drape(o.fold[0], o.fold[1], o.L, rnd() * 6.28) }));
     const box = (w, h, d, x, y, z = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), steel); m.position.set(x, y, z); body.add(m); };
-    box(0.33, 0.007, 0.007, 0, 0.046); for (const s of [1, -1]) box(0.028, 0.056, o.depth + 2 * o.bevel + 0.01, s * 0.14, 0.015);
+    box(0.33, 0.007, 0.007, 0, 0.046); for (const s of [1, -1]) box(0.028, 0.056, 2 * o.T + 0.012, s * 0.14, 0.015);
     hook(body, 0.046, DROP);
-    return finish(root, 'long', DROP + o.L);
+    return finish(root, DROP + o.L);
   }
 
   return item => { const make = KINDS[item.kind]; if (!make) throw new Error(`clothes.js: no pattern for kind "${item.kind}"`); return make(item); };

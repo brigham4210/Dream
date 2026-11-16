@@ -29,7 +29,7 @@
   #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 30px; text-align: center; color: #600; }
   @media (max-width: 640px) { #hint { display: none; } #head { left: 16px; top: 14px; } #line span { display: none; } }
 </style>
-<!-- clothes.js is the list of what hangs here; garments.js cuts each piece; wardrobe.js is the furniture and the room. -->
+<!-- clothes.js is the list of what hangs here; garments.js cuts each piece; wardrobe.js is the walk-in room and its fittings. -->
 <script src="clothes.js"></script>
 <script src="garments.js"></script>
 <script src="wardrobe.js"></script>
@@ -42,7 +42,7 @@
 </head>
 <body>
 <div id="head"><b>My Closet</b><span id="count"></span><a href="../">‹ Dream</a></div>
-<div id="hint">Drag to look around · scroll to zoom<br>Click a piece to take it off the rail</div>
+<div id="hint">Drag to look around · scroll to zoom<br>Click a piece to take it down</div>
 <div id="dock">
   <div id="card" hidden><button id="prev" aria-label="Previous piece">‹</button><div id="line"><b id="name"></b> <span id="note"></span></div><button id="next" aria-label="Next piece">›</button><button id="back">Put back</button></div>
   <div id="tabs"></div>
@@ -52,6 +52,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const CLOTHES = window.DREAM_CLOTHES || [];
@@ -63,55 +64,56 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.NeutralToneMapping;
-renderer.toneMappingExposure = 0.85;
+renderer.toneMappingExposure = 0.72;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); scene.environmentIntensity = 0.55; }
-scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8479, 0.5));
-const sun = new THREE.DirectionalLight(0xfff6ea, 2.1);
-sun.position.set(2.2, 4.2, 7); sun.target.position.set(0, 1.2, 0); scene.add(sun.target);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9a9388, 0.5));
+const sun = new THREE.DirectionalLight(0xfff6ea, 1.7);   // soft daylight in through the doorway
+sun.position.set(3.4, 5, 5); sun.target.position.set(0, 1.2, -0.3); scene.add(sun.target);
 sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
-Object.assign(sun.shadow.camera, { left: -3.4, right: 3.4, top: 2.4, bottom: -2.4, near: 1, far: 16 });
-sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.01; sun.shadow.radius = 5;
+Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 2.6, bottom: -2.6, near: 1, far: 16 });
+sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.012; sun.shadow.radius = 8;
 scene.add(sun);
 
 const closet = window.buildCloset({ THREE, scene, renderer });
 
-// hang the clothes: each rail's pieces are spread along it, turned so their fronts show
+// hang the clothes: each rail's pieces are spread along it, turned so their fronts show from the doorway
 const ease = t => t * t * (3 - 2 * t), tmp = new THREE.Vector3();
-const tailor = window.makeTailor(THREE), OUT_Y = 1.88, OUT_Z = 1.3, SLIDE = 0.9;
+const tailor = window.makeTailor(THREE, mergeVertices), OUT = new THREE.Vector3(0, 1.92, 1.0), SLIDE = 0.9;
 const pieces = CLOTHES.map(item => ({ item, ...tailor(item), v: 0, t: 0 }));
-for (const [name, r] of Object.entries(closet.rails)) {
-  const on = pieces.filter(p => p.rail === name);
+closet.rails.forEach((r, k) => {
+  const on = pieces.filter(p => r.groups.includes(p.item.group) || (k === 0 && !closet.rails.some(q => q.groups.includes(p.item.group))));
   on.forEach((p, i) => {
-    p.fan = r.fan; p.home = new THREE.Vector3(on.length > 1 ? r.x0 + (r.x1 - r.x0) * i / (on.length - 1) : (r.x0 + r.x1) / 2, r.y, 0);
-    p.out = new THREE.Vector3(p.home.x * 0.55, OUT_Y, OUT_Z);
+    p.yaw = r.yaw; p.fan = r.fan; p.home = new THREE.Vector3().lerpVectors(r.a, r.b, on.length > 1 ? i / (on.length - 1) : 0.5);
     scene.add(p.root); place(p);
   });
-}
-// taking a piece out: first it slides out of the row edge-on (v 0 to 0.5), then it comes forward and turns to face the room
+});
+// taking a piece down: first it slides out of the row edge-on (v 0 to 0.5), then it comes to the middle of the room and turns to face the doorway
 function place(p) {
   const a = ease(Math.min(1, p.v * 2)), b = ease(Math.max(0, p.v * 2 - 1)), s = Math.sign(p.fan);
-  tmp.set(p.home.x - s * Math.cos(p.fan) * SLIDE * a, p.home.y + 0.035 * Math.sin(Math.PI * Math.min(1, a * 2.5) / 2), Math.abs(Math.sin(p.fan)) * SLIDE * a);
-  p.root.position.lerpVectors(tmp, p.out, b); p.root.rotation.y = p.fan * (1 - b);
+  const lx = -s * Math.cos(p.fan) * SLIDE * a, lz = Math.abs(Math.sin(p.fan)) * SLIDE * a, c = Math.cos(p.yaw), n = Math.sin(p.yaw);
+  tmp.set(p.home.x + lx * c + lz * n, p.home.y + 0.035 * Math.sin(Math.PI * Math.min(1, a * 2.5) / 2), p.home.z - lx * n + lz * c);
+  p.root.position.lerpVectors(tmp, OUT, b); p.root.rotation.y = (p.yaw + p.fan) * (1 - b);
 }
 
 // camera: the whole wardrobe, one group on its rail, or one piece held out
 const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight || 1.6, 0.05, 80);
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; controls.minDistance = 0.6; controls.maxDistance = 22; controls.maxPolarAngle = Math.PI / 2 - 0.02;
+controls.enableDamping = true; controls.minDistance = 0.6; controls.maxDistance = 24; controls.maxPolarAngle = Math.PI / 2 - 0.02;
 const groups = [...new Set(CLOTHES.map(c => c.group))];
-const tall = () => Math.max(1, 0.9 / camera.aspect);
+const tall = () => Math.max(1, 1.05 / camera.aspect);
 let goal = null, focus = -1, tab = -1;
 function view() {
-  if (focus >= 0) { const p = pieces[focus], t = new THREE.Vector3(p.out.x, p.out.y - p.length / 2 - 0.1, p.out.z); return { target: t, cam: t.clone().add(new THREE.Vector3(0.3, 0.05, (1.75 + p.length * 2.1) * tall())) }; }
-  if (tab >= 0) { const on = pieces.filter(p => p.item.group === groups[tab]), box = new THREE.Box3();
-    for (const p of on) { box.expandByPoint(p.home); box.expandByPoint(tmp.set(p.home.x, p.home.y - p.length, 0)); }
-    const t = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3()), d = (1.3 + Math.max(s.y * 1.9, s.x * 1.5)) * tall(), side = Math.sign(on.reduce((n, p) => n + p.fan, 0));
-    return { target: t, cam: t.clone().add(new THREE.Vector3(side * 0.42 * d, 0.1 * d, 0.9 * d)) }; }
-  const d = 6.9 * tall(); return { target: new THREE.Vector3(0, 1.22, 0), cam: new THREE.Vector3(0.14 * d, 1.22 + 0.06 * d, d) };
+  if (focus >= 0) { const p = pieces[focus], t = new THREE.Vector3(OUT.x, OUT.y - p.length / 2 - 0.1, OUT.z); return { target: t, cam: t.clone().add(new THREE.Vector3(0.3, 0.05, (1.75 + p.length * 2.1) * tall())) }; }
+  if (tab >= 0) { const on = pieces.filter(p => p.item.group === groups[tab]), box = new THREE.Box3();   // stand in the doorway, turned towards that rail
+    for (const p of on) { box.expandByPoint(p.home); box.expandByPoint(tmp.set(p.home.x, p.home.y - p.length, p.home.z)); }
+    const t = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3()), d = (1.5 + Math.max(s.y * 1.9, Math.hypot(s.x, s.z) * 1.4)) * tall(), p = on[0];
+    const dir = new THREE.Vector3(Math.sin(p.yaw) * 0.62 + Math.sin(p.yaw + p.fan) * 0.25, 0.1, 0.85 + Math.cos(p.yaw) * 0.1).normalize();
+    return { target: t, cam: t.clone().addScaledVector(dir, d) }; }
+  const d = 7.6 * tall(); return { target: new THREE.Vector3(0, 1.2, -0.2), cam: new THREE.Vector3(0.06 * d, 1.2 + 0.09 * d, d - 0.2) };
 }
 controls.addEventListener('start', () => { goal = null; });
 
@@ -137,7 +139,7 @@ function pick(ev) {
   const r = canvas.getBoundingClientRect();
   ndc.set((ev.clientX - r.left) / r.width * 2 - 1, -((ev.clientY - r.top) / r.height * 2 - 1));
   ray.setFromCamera(ndc, camera);
-  const h = ray.intersectObjects([...roots, closet.unit], true)[0];
+  const h = ray.intersectObjects([...roots, closet.room], true)[0];
   for (let o = h && h.object; o; o = o.parent) { const k = roots.indexOf(o); if (k >= 0) return k; }
   return -1;
 }
