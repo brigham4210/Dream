@@ -35,6 +35,7 @@
 <script src="piano.js"></script>
 <script src="guitar.js"></script>
 <script src="studio.js"></script>
+<script src="camera.js"></script>
 <script type="importmap">
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -43,8 +44,8 @@
 </script>
 </head>
 <body>
-<div id="head"><b>My Music Room</b><span>Piano · guitar · singing studio</span><a href="../">‹ Dream</a></div>
-<div id="hint">Drag to look around · scroll to zoom<br>Click the keys, the strings, the lid, the booth door or the microphone</div>
+<div id="head"><b>My Music Room</b><span>Piano · guitar · singing studio · camera</span><a href="../">‹ Dream</a></div>
+<div id="hint">Drag to look around · scroll to zoom<br>Click the keys, the strings, the lid, the booth door, the microphone or the camera</div>
 <div id="dock">
   <div id="card" hidden><div id="line"><b id="name"></b> <span id="note"></span></div></div>
   <div id="tabs"></div>
@@ -84,7 +85,7 @@ const room = window.buildMusicRoom({ THREE, scene, renderer }), sound = window.m
 // put each thing in its place; its moving parts ease between shut (0) and open (1)
 const things = THINGS.map(entry => {
   const root = new THREE.Group(); root.position.set(entry.at[0], 0, entry.at[1]); root.rotation.y = entry.turn || 0; scene.add(root);
-  const { parts = {}, tick } = entry.build({ THREE, scene: root, sound });
+  const { parts = {}, tick } = entry.build({ THREE, scene: root, sound, renderer, world: scene });
   for (const k in parts) Object.assign(parts[k], { v: 0, t: 0 });
   root.updateMatrixWorld(true);
   const at = p => root.localToWorld(new THREE.Vector3(...p));
