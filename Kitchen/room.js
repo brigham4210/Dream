@@ -2,7 +2,7 @@
    buildKitchenRoom({ THREE, scene, renderer }) builds it around x = 0 (y up, +z towards you, metres).
    Walls face inward only, so a wall between the camera and the room simply disappears. */
 window.buildKitchenRoom = function ({ THREE, scene, renderer }) {
-  const HX = 3.6, ZB = -2.6, ZF = 3.2, RH = 2.9, ZC = (ZB + ZF) / 2, DZ = ZF - ZB;
+  const HX = 3.6, ZB = -2.6, ZF = 3.9, RH = 2.9, ZC = (ZB + ZF) / 2, DZ = ZF - ZB;
   const room = new THREE.Group(); scene.add(room);
   const aniso = renderer.capabilities.getMaxAnisotropy();
   const tex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
@@ -26,7 +26,7 @@ window.buildKitchenRoom = function ({ THREE, scene, renderer }) {
     const c = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.035), glow(2.1, 2.1, 2)); c.position.set(0, RH / 2 - 0.02, 0.004); m.add(c); };
   wall(2 * HX, 0, ZB, 0, tileMat); wall(2 * HX, 0, ZF, Math.PI); wall(DZ, -HX, ZC, Math.PI / 2); wall(DZ, HX, ZC, -Math.PI / 2);
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(2 * HX, DZ), std(0xf4f4f2, 1, 0, { emissive: 0xffffff, emissiveIntensity: 0.45 })); ceil.rotation.x = Math.PI / 2; ceil.position.set(0, RH, ZC); room.add(ceil);
-  for (const z of [-1.3, 2.1]) for (const x of [-2.4, -0.8, 0.8, 2.4]) { const p = new THREE.Mesh(new THREE.CircleGeometry(0.07, 32), glow(3.2, 3.1, 2.9)); p.rotation.x = Math.PI / 2; p.position.set(x, RH - 0.01, z); room.add(p); }
+  for (const z of [-1.3, 0.8, 2.8]) for (const x of [-2.4, -0.8, 0.8, 2.4]) { const p = new THREE.Mesh(new THREE.CircleGeometry(0.07, 32), glow(3.2, 3.1, 2.9)); p.rotation.x = Math.PI / 2; p.position.set(x, RH - 0.01, z); room.add(p); }
 
   const floorTex = tex(1024, 1024, (g, w, h) => {
     const rows = 8, rh = h / rows;

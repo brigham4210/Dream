@@ -37,7 +37,14 @@
 <script src="range.js"></script>
 <script src="counter.js"></script>
 <script src="fridge.js"></script>
-<script src="coffee.js"></script>
+<script src="appliances.js"></script>
+<script src="table.js"></script>
+<script src="bbq.js"></script>
+<script src="pantry.js"></script>
+<script src="rack.js"></script>
+<script src="pizza.js"></script>
+<script src="plancha.js"></script>
+<script src="clock.js"></script>
 <script type="importmap">
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -46,8 +53,8 @@
 </script>
 </head>
 <body>
-<div id="head"><b>My Dream Kitchen</b><span>Marble island · gas range · sink · fridge · espresso</span><a href="../">‹ Dream</a></div>
-<div id="hint">Drag to look around · scroll to zoom<br>Click doors and drawers, the knobs, the tap, the lamps or the espresso machine</div>
+<div id="head"><b>My Dream Kitchen</b><span>Italian · French · Chinese · Filipino · Mexican · pupusas · Korean barbecue · hotpot</span><a href="../">‹ Dream</a></div>
+<div id="hint">Drag to look around · scroll to zoom<br>Click doors and drawers, knobs, the tap, lamps, appliances,<br>the wok, the grill, the hotpot, the pizza oven, a pupusa or a pan</div>
 <div id="dock">
   <div id="card" hidden><div id="line"><b id="name"></b> <span id="note"></span></div></div>
   <div id="tabs"></div>
@@ -78,7 +85,7 @@ const sun = new THREE.DirectionalLight(0xfff6ea, 1.8);
 sun.position.set(3.5, 6.5, 6); sun.target.position.set(0, 0.8, -0.6); scene.add(sun.target);
 sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
-Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 4, bottom: -4, near: 1, far: 20 });
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 1, far: 22 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.012; sun.shadow.radius = 6;
 scene.add(sun);
 
@@ -101,7 +108,7 @@ controls.enableDamping = true; controls.minDistance = 0.35; controls.maxDistance
 const tall = () => Math.max(1, 1.25 / camera.aspect);
 let goal = null, focus = -1;
 function view() {
-  if (focus < 0) { const d = 9 * tall(); return { target: new THREE.Vector3(0, 1.05, -0.9), cam: new THREE.Vector3(0.14 * d, 1.05 + 0.3 * d, -0.9 + d) }; }
+  if (focus < 0) { const d = 12.5 * tall(); return { target: new THREE.Vector3(0, 0.7, 0.5), cam: new THREE.Vector3(0.12 * d, 0.7 + 0.52 * d, 0.5 + 0.86 * d) }; }
   const v = things[focus].view; return { target: v.target, cam: v.target.clone().add(v.cam.clone().sub(v.target).multiplyScalar(tall())) };
 }
 controls.addEventListener('start', () => { goal = null; });
@@ -144,10 +151,10 @@ addEventListener('resize', fit); fit(); reset(); btns[0].classList.add('on');
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const real = clock.getDelta(), dt = Math.min(real, 0.05), ease = 1 - Math.pow(0.92, Math.min(real, 0.5) * 60);   // the camera glides at the same speed however slowly frames come
   for (const t of things) { if (t.tick) t.tick(dt);
     for (const k in t.parts) { const p = t.parts[k]; if (Math.abs(p.t - p.v) > 1e-4) { p.v += (p.t - p.v) * Math.min(1, dt * 4.5); if (Math.abs(p.t - p.v) < 2e-3) p.v = p.t; p.set(p.v); } } }
-  if (goal) { controls.target.lerp(goal.target, 0.08); camera.position.lerp(goal.cam, 0.08); if (camera.position.distanceTo(goal.cam) < 0.01) goal = null; }
+  if (goal) { controls.target.lerp(goal.target, ease); camera.position.lerp(goal.cam, ease); if (camera.position.distanceTo(goal.cam) < 0.01) goal = null; }
   controls.update();
   renderer.render(scene, camera);
 });
