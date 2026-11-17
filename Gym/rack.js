@@ -4,7 +4,7 @@
    Click the barbell to press it, the lat bar to pull the stack up. */
 (window.DREAM_GYM = window.DREAM_GYM || []).push({
   name: 'Rack', title: 'Power rack', line: 'Barbell, pull-up bar, lat pulldown on a cable and weight stack · click the bar or the lat bar',
-  at: [2.45, -1.2], turn: Math.PI, view: { target: [0, 1.1, 0.5], cam: [2.2, 1.85, -3.3] },
+  at: [2.45, -0.2], turn: Math.PI, view: { target: [0, 1.1, 0.5], cam: [2.2, 1.85, -3.3] },
   build({ THREE, scene, sound, kit }) {
 const { M, tools, shadows, reps, mat, std } = kit, g = new THREE.Group(); scene.add(g);
 const { mk, box, cyl, rod, tube, grp } = tools(g), R = reps();
