@@ -1,4 +1,4 @@
-/* The island: green cabinets under one long slab of marble that overhangs on the near side for three oak stools,
+/* The island: light wood cabinets under one long slab of marble that overhangs on the near side for three oak stools,
    with a bowl of fruit, a loaf on a board, a pasta machine and its drying rack, a kaldero and a kawali on top, and three brass pendant lamps hanging over it.
    build() adds it to whatever `scene` it is given: centred on x = z = 0, the stools towards +z, the floor is y = 0, metres. */
 (window.DREAM_KITCHEN = window.DREAM_KITCHEN || []).push({

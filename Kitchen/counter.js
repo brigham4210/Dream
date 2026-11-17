@@ -1,8 +1,8 @@
-/* The counter along the back wall: green cabinets under a marble worktop, either side of the range, with a sink under a window
+/* The counter along the back wall: light wood cabinets under a marble worktop, either side of the range, with a sink under a window
    and two oak shelves of crockery. build() adds it to whatever `scene` it is given: the wall is z = 0, the room is towards +z,
    x = 0 is the middle of the room, the floor is y = 0, metres. Every door and drawer opens; the tap runs. */
 (window.DREAM_KITCHEN = window.DREAM_KITCHEN || []).push({
-  name: 'Counter', title: 'Counter and sink', line: 'Marble on green cabinets · click a door or drawer to open it, the tap to run the water',
+  name: 'Counter', title: 'Counter and sink', line: 'Marble on light wood cabinets · click a door or drawer to open it, the tap to run the water',
   at: [0, -2.6], turn: 0, view: { target: [2.0, 1.1, 0.3], cam: [1.55, 1.85, 2.45] },
   build({ THREE, scene, sound, kit }) {
 const { std, tex, rand, tools, M, front, pull, knob, slab, herb } = kit, g = new THREE.Group(); scene.add(g);

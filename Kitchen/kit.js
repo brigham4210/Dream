@@ -28,7 +28,7 @@ function make(THREE) {
     for (let i = 0; i < n; i++) { x.strokeStyle = `rgba(${dark},${0.05 + rnd() * 0.12})`; x.lineWidth = 0.6 + rnd() * 1.6; x.beginPath(); const x0 = rnd() * w;
       x.moveTo(x0, 0); x.bezierCurveTo(x0 + 10 - rnd() * 20, 170, x0 + 12 - rnd() * 24, 340, x0 + 8 - rnd() * 16, h); x.stroke(); } });
   const M = {
-    paint: std(0x2f463c, 0.5),                                             // the cabinets: a deep green
+    paint: std(0xffffff, 0.5, 0, { map: wood('#e6cfa6', '150,105,55', 50) }),   // the cabinets: light natural wood
     marble: std(0xffffff, 0.22, 0, { map: marbleTex }),
     oak: std(0xffffff, 0.55, 0, { map: wood('#cfa878', '120,75,35', 70) }),
     brass: std(0xc9a252, 0.28, 1),
