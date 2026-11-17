@@ -1,5 +1,5 @@
 /* The Korean barbecue and hotpot table: an oak table with a charcoal grill and a divided hotpot set into a stone top,
-   banchan, lettuce, sliced beef and vegetables around them, four stools, and two copper extractor ducts that come down
+   bowls and chopsticks around them, four stools, and two copper extractor ducts that come down
    from the ceiling to draw the smoke and steam away. build() adds it to whatever `scene` it is given, centred on
    x = z = 0, long side along x, the floor is y = 0, metres. Click the grill or the pot to start it, a duct to raise or lower it. */
 (window.DREAM_KITCHEN = window.DREAM_KITCHEN || []).push({
@@ -25,11 +25,6 @@ mk(new THREE.TorusGeometry(0.175, 0.012, 10, 48).rotateX(Math.PI / 2), M.brass, 
 const mesh = tex(256, 256, (c, w) => { c.clearRect(0, 0, w, w); c.strokeStyle = '#b9bcc0'; c.lineWidth = 3; for (let i = 6; i < w; i += 16) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, w); c.moveTo(0, i); c.lineTo(w, i); c.stroke(); } });
 mk(new THREE.CircleGeometry(0.165, 48).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: mesh, alphaTest: 0.4, metalness: 0.9, roughness: 0.35, side: THREE.DoubleSide }), grill, 0, 0.026, 0).userData.through = true;
 mk(new THREE.TorusGeometry(0.165, 0.005, 8, 48).rotateX(Math.PI / 2), M.steel, grill, 0, 0.026, 0);
-const belly = tex(64, 16, (c, w, h) => { for (let i = 0; i < 8; i++) { c.fillStyle = i % 2 ? '#f1d9cc' : '#c9705a'; c.fillRect(0, i * 2, w, 2); } }), pork = std(0xffffff, 0.5, 0, { map: belly });
-for (const [x, z, r] of [[-0.07, -0.06, 0.2], [0.04, -0.075, -0.1], [-0.05, 0.02, 0.05], [0.065, 0.01, 0.3]]) { const m = box(-0.055, 0.055, 0.03, 0.038, -0.018, 0.018, pork, grill); m.position.set(x, 0.034, z); m.rotation.y = r; }
-for (const [x, z] of [[-0.06, 0.09], [0.02, 0.1], [0.09, 0.08]]) { const m = mk(new THREE.BoxGeometry(0.05, 0.012, 0.035), std(0x5a2c16, 0.5), grill, x, 0.035, z); m.rotation.y = rnd() * 3; }
-for (let i = 0; i < 6; i++) cyl(0.01, 0.004, std(0xf1ead2, 0.6), 0.1 + (i % 2) * 0.022, 0.031, -0.03 + i * 0.012, grill, 10);
-for (const [x, z] of [[-0.11, -0.01], [-0.115, 0.05]]) mk(new THREE.CylinderGeometry(0.02, 0.014, 0.008, 16), std(0xe6dcc4, 0.7), grill, x, 0.033, z);
 grill.userData.click = () => { const p = parts.grill; p.t = p.t ? 0 : 1; if (p.t) sound.ignite(); else sound.click(); sound.loop('bbq', p.t); };
 parts.grill = { set() {} };
 { const t = grp(-0.02, TY + 0.006, 0.02); t.rotation.y = 1.3; for (const k of [-1, 1]) { const a = box(-0.1, 0.1, 0, 0.003, -0.007, 0.007, M.steel, t); a.rotation.y = k * 0.07; a.position.z = k * 0.01; } }                                            // tongs
@@ -38,22 +33,13 @@ parts.grill = { set() {} };
 const pot = grp(PX, TY, 0), steel = std(0xd3d6d9, 0.25, 1, { side: THREE.DoubleSide });
 cyl(0.2, 0.004, M.black, 0, 0.002, 0, pot, 48); lathe([[0, 0.006], [0.15, 0.006], [0.185, 0.03], [0.19, 0.095], [0.198, 0.097]], steel, pot, 0, 0, 0, 48); box(-0.186, 0.186, 0.01, 0.092, -0.003, 0.003, steel, pot);
 for (const k of [-1, 1]) box(k * 0.2 - 0.025, k * 0.2 + 0.025, 0.08, 0.09, -0.04, 0.04, M.black, pot);
-const BY = 0.078; mk(new THREE.CircleGeometry(0.184, 40, 0, Math.PI).rotateX(-Math.PI / 2), gloss(0xa8200f), pot, 0, BY, 0); mk(new THREE.CircleGeometry(0.184, 40, Math.PI, Math.PI).rotateX(-Math.PI / 2), gloss(0xe9dfc4), pot, 0, BY, 0);
-const bits = []; for (let i = 0; i < 26; i++) { const spicy = i % 2, a = rnd() * Math.PI * 0.9 + 0.15, d = 0.03 + Math.sqrt(rnd()) * 0.13, x = Math.cos(a) * d, z = (spicy ? -1 : 1) * Math.sin(a) * d, kind = i % 5;
-  const m = kind === 0 ? mk(new THREE.BoxGeometry(0.03, 0.02, 0.03), std(0xf6f1e2, 0.6), pot, x, BY, z) : kind === 1 ? mk(new THREE.TorusGeometry(0.01, 0.004, 6, 12).rotateX(Math.PI / 2), std(0x4f9a3a, 0.6), pot, x, BY + 0.003, z)
-    : kind === 2 ? mk(new THREE.SphereGeometry(0.018, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(0x8a6a4a, 0.7), pot, x, BY, z) : kind === 3 ? mk(new THREE.ConeGeometry(0.006, 0.04, 6).rotateZ(Math.PI / 2), gloss(spicy ? 0x7a0f0a : 0xe8802a), pot, x, BY + 0.004, z) : mk(new THREE.CylinderGeometry(0.02, 0.02, 0.012, 14), std(0xf0c419, 0.6), pot, x, BY + 0.002, z);
-  m.rotation.y = rnd() * 3; bits.push({ m, y: m.position.y, k: rnd() * 6 }); }
-const bubbles = []; for (let i = 0; i < 18; i++) { const a = rnd() * 6.28, d = Math.sqrt(rnd()) * 0.16, m = mk(new THREE.SphereGeometry(0.008 + rnd() * 0.006, 10, 8), gloss(Math.sin(a) > 0 ? 0xf4ecd8 : 0xd04a2a), pot, Math.cos(a) * d, BY, -Math.sin(a) * d); m.visible = false; bubbles.push({ m, k: rnd() * 6, s: 3 + rnd() * 4 }); }
+const BY = 0.078;
+const bits = [];
+const bubbles = [];
 pot.userData.click = () => { const p = parts.pot; p.t = p.t ? 0 : 1; sound.click(); sound.loop('bubble', p.t); };
 parts.pot = { set() {} };
 
-/* -------------------------------------- banchan, lettuce, beef, vegetables */
-const dish = (x, z, c, bumpy) => { lathe([[0.02, 0], [0.042, 0.008], [0.052, 0.028]], M.ceramic, g, x, TY, z, 24); const f = mk(new THREE.SphereGeometry(0.044, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(c, 0.6), g, x, TY + 0.014, z); f.scale.y = 0.4; if (bumpy) for (let i = 0; i < 6; i++) mk(new THREE.IcosahedronGeometry(0.014, 0), std(c, 0.55), g, x + (rnd() - 0.5) * 0.05, TY + 0.03, z + (rnd() - 0.5) * 0.05); };
-dish(-0.07, -0.33, 0xc8321e, true); dish(0.05, -0.34, 0x3f7a3a, true); dish(-0.07, 0.33, 0xe9e2c0, true); dish(0.05, 0.34, 0xf0c419); dish(0, -0.2, 0x8a4a22); dish(0, 0.2, 0xd9a05a, true);
-{ const b = grp(-0.63, TY, -0.27); cyl(0.085, 0.01, std(0xb58a4a, 0.9), 0, 0.005, 0, b, 32); for (let i = 0; i < 7; i++) { const l = mk(new THREE.CircleGeometry(0.075, 14).rotateX(-Math.PI / 2), std(i % 2 ? 0x6aa84a : 0x4f8f3a, 0.7, 0, { side: THREE.DoubleSide }), b, (rnd() - 0.5) * 0.03, 0.014 + i * 0.006, (rnd() - 0.5) * 0.03); l.rotation.set((rnd() - 0.5) * 0.3, rnd() * 3, (rnd() - 0.5) * 0.3); l.scale.z = 0.8; } }
-{ const p = grp(0.63, TY, 0.27); cyl(0.09, 0.008, M.ceramic, 0, 0.004, 0, p, 40); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5, m = cyl(0.016, 0.045, std(i % 3 ? 0xb5303a : 0xd9707a, 0.5), Math.cos(a) * 0.055, 0.024, Math.sin(a) * 0.055, p, 12); m.rotation.z = Math.PI / 2; m.rotation.y = -a + Math.PI / 2; } }
-{ const p = grp(0.63, TY, -0.27); cyl(0.09, 0.008, M.ceramic, 0, 0.004, 0, p, 40); for (let i = 0; i < 14; i++) { cyl(0.003, 0.07, std(0xf6f1e2, 0.7), -0.04 + (i % 7) * 0.006, 0.014 + (i > 6 ? 0.006 : 0), 0.03, p, 6).rotation.z = Math.PI / 2; }
-  for (let i = 0; i < 4; i++) mk(new THREE.SphereGeometry(0.018, 12, 10), std(0xf4eedd, 0.6), p, 0.03 + (i % 2) * 0.035, 0.026, -0.04 + (i >> 1) * 0.035); for (let i = 0; i < 3; i++) { const l = mk(new THREE.BoxGeometry(0.07, 0.01, 0.04), std(0xd6e6b0, 0.7), p, -0.035, 0.014 + i * 0.01, -0.03); l.rotation.y = i * 0.3; } }
+/* ------------------------------------------------- rice bowls and chopsticks */
 for (const x of [-0.36, 0.36]) for (const z of [-0.37, 0.37]) { lathe([[0.02, 0], [0.03, 0.01], [0.048, 0.04]], M.ceramic, g, x, TY, z, 24); for (const k of [-1, 1]) { const c = cyl(0.003, 0.22, M.steel, x + 0.1 + k * 0.007, TY + 0.003, z, g, 6); c.rotation.z = Math.PI / 2; c.rotation.y = Math.PI / 2 + k * 0.02; } }
 
 /* ------------------------------------------------------- extractor ducts */

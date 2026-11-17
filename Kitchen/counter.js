@@ -100,16 +100,15 @@ stack(-2.3, S1, 0.125, 8); stack(-2.02, S1, 0.095, 6);
 for (let i = 0; i < 5; i++) mk(new THREE.LatheGeometry(bowl, 32), std([0xf4f0e8, 0xf4f0e8, 0x9fb0a0, 0x9fb0a0, 0xd6c3a1][i], 0.3, 0, { side: THREE.DoubleSide }), g, -1.74, S1 + i * 0.016, 0.14);
 for (let i = 0; i < 6; i++) mk(new THREE.CylinderGeometry(0.034, 0.028, 0.105, 24, 1, true), M.glass, g, -1.45 + (i % 3) * 0.085, S1 + 0.053, 0.09 + (i > 2 ? 0.09 : 0)).userData.through = true;
 for (let i = 0; i < 4; i++) { const m = grp(-1.1 + i * 0.13, S1, 0.14); mk(new THREE.CylinderGeometry(0.04, 0.036, 0.085, 24, 1, true), M.ceramic, m, 0, 0.0425, 0); cyl(0.036, 0.004, M.ceramic, 0, 0.002, 0, m); mk(new THREE.TorusGeometry(0.025, 0.006, 8, 20, Math.PI).rotateZ(-Math.PI / 2), M.ceramic, m, 0.04, 0.045, 0); m.rotation.y = -0.6; }
-// jars of dry goods, a few cookbooks and a plant on the upper shelf
+// empty glass jars, a few cookbooks and a plant on the upper shelf
 [[0xe8d9a8, 0.2], [0x8a5a34, 0.16], [0xf1ead8, 0.23], [0xb9482c, 0.13]].forEach(([c, h], i) => { const x = -2.33 + i * 0.16;
-  mk(new THREE.CylinderGeometry(0.058, 0.058, h, 28, 1, true), M.glass, g, x, S2 + h / 2, 0.14).userData.through = true; cyl(0.052, h * 0.78, std(c, 0.9), x, S2 + h * 0.39 + 0.004, 0.14); cyl(0.06, 0.02, M.oak, x, S2 + h + 0.01, 0.14); });
+  mk(new THREE.CylinderGeometry(0.058, 0.058, h, 28, 1, true), M.glass, g, x, S2 + h / 2, 0.14).userData.through = true; cyl(0.06, 0.02, M.oak, x, S2 + h + 0.01, 0.14); });
 [[0xb9482c, 0.24, 0.035], [0xe9e2d0, 0.27, 0.045], [0x2f463c, 0.22, 0.03], [0xd9a441, 0.25, 0.04], [0x39506b, 0.26, 0.03]].reduce((x, [c, h, t]) => { box(x, x + t, S2, S2 + h, 0.05, 0.23, std(c, 0.8)); return x + t + 0.002; }, -1.55);
 herb(g, -0.78, S2, 0.14, rnd, 0x4d7f4a, 1.5);
 
 /* ------------------------------------------------- on the worktop by the range */
 cyl(0.06, 0.16, std(0xe9e4d8, 0.4), -0.52, TOP + 0.08, 0.2, g, 32);
 for (let i = 0; i < 5; i++) { const a = i * 1.3, s = grp(-0.52 + Math.cos(a) * 0.025, TOP + 0.02, 0.2 + Math.sin(a) * 0.025); s.rotation.set(Math.sin(a) * 0.16, 0, -Math.cos(a) * 0.16); cyl(0.006, 0.3, M.oak, 0, 0.15, 0, s, 10); mk(new THREE.SphereGeometry(0.022, 16, 12), M.oak, s, 0, 0.31, 0).scale.set(1, 1.5, 0.4); }
-cyl(0.03, 0.2, std(0x5d6b2a, 0.15, 0, { transparent: true, opacity: 0.85 }), -0.72, TOP + 0.1, 0.14); cyl(0.011, 0.07, std(0x5d6b2a, 0.15), -0.72, TOP + 0.235, 0.14, g, 12); cyl(0.013, 0.015, M.oak, -0.72, TOP + 0.275, 0.14, g, 12);
 for (const [x, m] of [[1.1, M.oak], [1.2, M.black]]) { mk(new THREE.CylinderGeometry(0.022, 0.03, 0.15, 20), m, g, x, TOP + 0.075, 0.16); mk(new THREE.SphereGeometry(0.024, 16, 12), m, g, x, TOP + 0.16, 0.16); }
 
 g.traverse(o => { if (o.isMesh && !o.material.transparent && !o.material.isMeshBasicMaterial) o.castShadow = o.receiveShadow = true; });

@@ -1,5 +1,5 @@
-/* The range: a steel six-burner gas cooker with one wide oven, every burner in use (a palayok, a skillet of eggs, bamboo
-   steamers, a wok, a cast-iron pot and a crêpe pan), a rail of utensils on the wall and an extractor hood above. build() adds it to whatever `scene` it is given: the wall is z = 0,
+/* The range: a steel six-burner gas cooker with one wide oven, every burner carrying something (a palayok, a skillet,
+   bamboo steamers, a wok, a cast-iron pot and a crêpe pan), a rail of utensils on the wall and an extractor hood above. build() adds it to whatever `scene` it is given: the wall is z = 0,
    the front towards +z, the floor is y = 0, metres. The knobs light the burners, the oven door drops, the hood lights switch, the steamer lid lifts and the wok tosses. */
 (window.DREAM_KITCHEN = window.DREAM_KITCHEN || []).push({
   name: 'Range', title: 'Range cooker', line: 'Six gas burners and a wide oven · click a knob to light a burner, the wok to toss it, the steamer or the oven door to open it',
@@ -14,14 +14,12 @@ const enamel = new THREE.MeshPhysicalMaterial({ color: 0x0b0b0c, roughness: 0.25
 for (const k of [-1, 1]) { box(k * W - (k > 0 ? 0.02 : 0), k * W + (k < 0 ? 0.02 : 0), 0.1, 0.9, 0, D, M.steel); for (const z of [0.06, D - 0.04]) cyl(0.02, 0.1, M.steel, k * (W - 0.05), 0.05, z); }
 box(-W, W, 0.1, 0.9, 0, 0.02, M.steel); box(-W, W, 0.1, 0.12, 0, D, M.steel); box(-W, W, 0.9, TOP, 0, FZ, enamel); box(-W, W, TOP, 1.0, 0, 0.03, M.steel);
 box(-W, W, 0.78, 0.9, D, FZ, M.steel); box(-W, W, 0.12, 0.195, D, FZ - 0.01, M.steel); box(-W + 0.06, W - 0.06, 0, 0.1, 0.05, D - 0.06, M.black);
-// the oven: a dark enamel box you can look into, a shelf, and a pie on a tray
+// the oven: a dark enamel box you can look into, a shelf, and a tray
 const cavity = std(0x1b1d22, 0.5, 0.2, { side: THREE.BackSide, emissive: 0xff9a40, emissiveIntensity: 0 });
 mk(new THREE.BoxGeometry(2 * W - 0.1, 0.56, D - 0.03), cavity, g, 0, 0.485, (D + 0.03) / 2);
 for (const z of [0.07, D - 0.03]) box(-W + 0.07, W - 0.07, 0.4, 0.406, z, z + 0.006, M.steel);
 for (let i = 0; i < 23; i++) { const x = -W + 0.07 + i * (2 * W - 0.14) / 22; box(x - 0.002, x + 0.002, 0.4, 0.404, 0.07, D - 0.024, M.steel); }
 box(-0.22, 0.22, 0.406, 0.416, 0.14, 0.5, M.iron);
-{ const crust = std(0xc98a3c, 0.75); mk(new THREE.CylinderGeometry(0.15, 0.125, 0.04, 40), crust, g, 0, 0.436, 0.32); mk(new THREE.SphereGeometry(0.14, 40, 12, 0, Math.PI * 2, 0, Math.PI / 2), std(0xd9a04a, 0.65), g, 0, 0.453, 0.32).scale.y = 0.22;
-  mk(new THREE.TorusGeometry(0.143, 0.012, 10, 40).rotateX(Math.PI / 2), crust, g, 0, 0.456, 0.32); }
 const ovenLight = new THREE.PointLight(0xffb060, 0, 1.6, 1.5); ovenLight.position.set(0, 0.68, 0.3); g.add(ovenLight);
 const door = grp(0, 0.2, D + 0.016);
 { const h = 0.575; box(-W + 0.004, W - 0.004, 0, h, -0.016, 0.014, M.steel, door); box(-0.44, 0.44, 0.1, h - 0.14, 0.014, 0.018, enamel, door);
@@ -43,17 +41,14 @@ const flames = B.map(([x, z], i) => {
   // its knob
   const kn = grp(-0.45 + i * 0.18, 0.84, FZ); cyl(0.034, 0.006, M.black, 0, 0, 0.003, kn, 32).rotation.x = Math.PI / 2; cyl(0.025, 0.032, M.brass, 0, 0, 0.022, kn, 32).rotation.x = Math.PI / 2; box(-0.003, 0.003, 0.006, 0.025, 0.038, 0.04, M.black, kn);
   const p = parts['b' + i] = { set: v => { kn.rotation.z = -v * 1.9; f.visible = v > 0.02; f.userData.v = v; } };
-  kn.userData.click = () => { p.t = p.t ? 0 : 1; if (p.t) sound.ignite(); else sound.click(); sound.loop('gas', B.filter((_, k) => parts['b' + k].t).length / 3); sound.loop('sizzle', [1, 3, 5].filter(k => parts['b' + k].t).length ? 1 : 0); };
+  kn.userData.click = () => { p.t = p.t ? 0 : 1; if (p.t) sound.ignite(); else sound.click(); sound.loop('gas', B.filter((_, k) => parts['b' + k].t).length / 3);  };
   return f; });
 for (const x of [-0.4, 0, 0.4]) for (const k of [-1, 1]) box(x + k * 0.19 - 0.006, x + k * 0.19 + 0.006, GY - 0.012, GY, 0.04, D - 0.02, M.iron);
 
-/* ------------------------------------------------- a skillet of eggs, a pot */
+/* ------------------------------------------------------ a skillet, a pot */
 { const pan = grp(B[PAN][0], GY, B[PAN][1]); pan.rotation.y = -0.7;
   mk(new THREE.LatheGeometry([[0, 0.004], [0.11, 0.004], [0.132, 0.042], [0.137, 0.042], [0.114, 0], [0, 0]].map(p => new THREE.Vector2(...p)), 48), std(0x161617, 0.65, 0.4, { side: THREE.DoubleSide }), pan);
-  box(0.13, 0.31, 0.03, 0.042, -0.014, 0.014, M.iron, pan); cyl(0.014, 0.012, M.iron, 0.31, 0.036, 0, pan, 16);
-  const white = std(0xfbfaf4, 0.45), yolk = std(0xf2a51d, 0.3);
-  for (const [x, z, s] of [[-0.035, 0.02, 1], [0.045, -0.03, 0.9]]) { mk(new THREE.SphereGeometry(0.05, 24, 10), white, pan, x, 0.006, z).scale.set(s, 0.07, s * 0.85); mk(new THREE.SphereGeometry(0.03, 20, 10), white, pan, x + 0.03, 0.006, z + 0.025).scale.set(1, 0.1, 1.2);
-    mk(new THREE.SphereGeometry(0.017, 20, 12), yolk, pan, x, 0.01, z).scale.y = 0.6; } }
+  box(0.13, 0.31, 0.03, 0.042, -0.014, 0.014, M.iron, pan); cyl(0.014, 0.012, M.iron, 0.31, 0.036, 0, pan, 16); }
 { const pot = grp(B[POT][0], GY, B[POT][1]), red = new THREE.MeshPhysicalMaterial({ color: 0xc4511f, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.15 });
   mk(new THREE.CylinderGeometry(0.13, 0.12, 0.11, 48), red, pot, 0, 0.055, 0); mk(new THREE.SphereGeometry(0.134, 48, 12, 0, Math.PI * 2, 0, Math.PI / 2), red, pot, 0, 0.11, 0).scale.y = 0.25; cyl(0.136, 0.008, red, 0, 0.11, 0, pot, 48);
   cyl(0.018, 0.02, M.steel, 0, 0.152, 0, pot, 20); for (const k of [-1, 1]) box(k * 0.125 - 0.03, k * 0.125 + 0.03, 0.08, 0.092, -0.035, 0.035, red, pot); }
@@ -67,7 +62,6 @@ const steamer = grp(B[STEAM][0], GY, B[STEAM][1]), lid = grp(0, 0.19, 0, steamer
   cyl(0.125, 0.06, M.steel, 0, 0.03, 0, steamer, 40); for (const k of [-1, 1]) box(k * 0.14 - 0.02, k * 0.14 + 0.02, 0.045, 0.055, -0.02, 0.02, M.steel, steamer);
   for (const y of [0.06, 0.125]) { mk(new THREE.CylinderGeometry(0.116, 0.116, 0.065, 48, 1, true), bamboo, steamer, 0, y + 0.0325, 0); for (const b of [0.008, 0.057]) cyl(0.119, 0.012, band, 0, y + b, 0, steamer, 48).material = band; }
   for (const y of [0.066, 0.131]) cyl(0.114, 0.006, weave, 0, y, 0, steamer, 40);
-  for (let i = 0; i < 7; i++) { const a = i * Math.PI * 2 / 6, r = i < 6 ? 0.068 : 0, d = mk(new THREE.SphereGeometry(0.03, 16, 10), std(0xf4eedd, 0.55), steamer, Math.cos(a) * r, 0.152, Math.sin(a) * r); d.scale.set(1, 0.75, 1); mk(new THREE.ConeGeometry(0.012, 0.016, 8), std(0xf4eedd, 0.55), steamer, Math.cos(a) * r, 0.178, Math.sin(a) * r); }
   mk(new THREE.SphereGeometry(0.119, 48, 10, 0, Math.PI * 2, 0, Math.PI / 2), weave, lid).scale.y = 0.28; cyl(0.121, 0.014, band, 0, 0.004, 0, lid, 48); mk(new THREE.TorusGeometry(0.02, 0.005, 8, 16, Math.PI), band, lid, 0, 0.03, 0);
   parts.steamer = { set: v => { lid.position.set(0, 0.19 + v * 0.07, -v * 0.15); lid.rotation.x = -v * 0.9; } };
   steamer.userData.click = () => { const p = parts.steamer; p.t = p.t ? 0 : 1; sound.tap(); }; }
@@ -76,14 +70,9 @@ const wok = grp(B[WOK][0], GY, B[WOK][1]), food = grp(0, 0, 0, wok); let toss = 
   const R = 0.2, arc = []; for (let i = 0; i <= 12; i++) { const a = i / 12 * 0.92; arc.push([R * Math.sin(a), R * (1 - Math.cos(a))]); }
   lathe(arc, std(0x1d1f22, 0.42, 0.7, { side: THREE.DoubleSide }), wok, 0, 0, 0, 48);
   const h = grp(0, 0.08, 0.155, wok); h.rotation.x = Math.PI / 2 - 0.25; cyl(0.011, 0.06, M.steel, 0, 0.03, 0, h, 12); cyl(0.014, 0.13, M.oak, 0, 0.12, 0, h, 12); mk(new THREE.TorusGeometry(0.03, 0.005, 8, 16, Math.PI), M.steel, wok, 0, 0.08, -0.158).rotation.x = -Math.PI / 2;
-  let sd = 5; const r = () => (sd = sd * 16807 % 2147483647) / 2147483647, cols = [0x3f8f3a, 0x3f8f3a, 0xc8321e, 0xe8802a, 0xe9d3a5, 0xe9d3a5, 0x6aa84a, 0xf1f1e6];
-  for (let i = 0; i < 34; i++) { const a = r() * 6.28, d = Math.sqrt(r()) * 0.095, m = mk(new THREE.BoxGeometry(0.014 + r() * 0.022, 0.008 + r() * 0.008, 0.012 + r() * 0.014), std(cols[i % cols.length], 0.5), food, Math.cos(a) * d, R * (1 - Math.cos(Math.asin(d / R))) + 0.008 + r() * 0.014, Math.sin(a) * d); m.rotation.set(r() * 3, r() * 3, r() * 3); }
   wok.userData.click = () => { if (toss < 0) { toss = 0; sound.toss(); } }; }
-{ const c = grp(B[CREPE][0], GY, B[CREPE][1]); c.rotation.y = -0.55;                                    // a crêpe on its flat pan, and the rake that spreads the batter
+{ const c = grp(B[CREPE][0], GY, B[CREPE][1]); c.rotation.y = -0.55;                                    // the flat crêpe pan, and the rake that spreads the batter
   cyl(0.145, 0.01, M.iron, 0, 0.005, 0, c, 48); mk(new THREE.TorusGeometry(0.143, 0.006, 8, 48).rotateX(Math.PI / 2), M.iron, c, 0, 0.012, 0); box(0.14, 0.34, 0.008, 0.02, -0.013, 0.013, M.iron, c);
-  const lace = kit.tex(256, 256, (x, w) => { x.fillStyle = '#ecd29a'; x.fillRect(0, 0, w, w); let s = 3; const r = () => (s = s * 16807 % 2147483647) / 2147483647;
-    for (let i = 0; i < 260; i++) { x.fillStyle = `rgba(${150 + r() * 40},${85 + r() * 30},30,${0.15 + r() * 0.35})`; x.beginPath(); x.arc(r() * w, r() * w, 3 + r() * 10, 0, 7); x.fill(); } });
-  mk(new THREE.CylinderGeometry(0.128, 0.128, 0.003, 48), std(0xffffff, 0.8, 0, { map: lace }), c, 0, 0.0125, 0);
   const t = grp(-0.03, 0.02, 0.02, c); t.rotation.y = 0.9; cyl(0.006, 0.2, M.oak, 0, 0, 0.02, t, 10).rotation.x = Math.PI / 2; cyl(0.007, 0.13, M.oak, 0, 0, -0.08, t, 10).rotation.z = Math.PI / 2; }
 const claySteam = steam(g, B[CLAY][0], GY + 0.17, B[CLAY][1], 6, 0.18, 0.45), bambooSteam = steam(g, B[STEAM][0], GY + 0.24, B[STEAM][1], 7, 0.2, 0.5), wokSteam = steam(g, B[WOK][0], GY + 0.07, B[WOK][1], 5, 0.16, 0.35);
 const potSteam = steam(g, B[POT][0], GY + 0.15, B[POT][1], 7, 0.2, 0.5), panSteam = steam(g, B[PAN][0], GY + 0.04, B[PAN][1], 4, 0.12, 0.25);
@@ -108,7 +97,7 @@ g.traverse(o => { if (o.isMesh && !o.material.transparent && !o.material.isMeshB
 let time = 0;
 function tick(dt) { time += dt;
   flames.forEach((f, i) => { if (!f.visible) return; const v = f.userData.v, s = v * (0.9 + 0.12 * Math.sin(time * 31 + i * 2) + 0.06 * Math.sin(time * 53 + i)); f.scale.set(1, s, 1); });
-  potSteam(dt, parts['b' + POT].v); panSteam(dt, parts['b' + PAN].v); claySteam(dt, parts['b' + CLAY].v); bambooSteam(dt, parts['b' + STEAM].v); wokSteam(dt, parts['b' + WOK].v);
+  potSteam(dt, parts['b' + POT].v); claySteam(dt, parts['b' + CLAY].v); bambooSteam(dt, parts['b' + STEAM].v); wokSteam(dt, parts['b' + WOK].v);
   if (toss >= 0) { toss += dt; const a = Math.sin(Math.min(1, toss / 0.7) * Math.PI); wok.rotation.x = 0.3 * a; food.position.y = 0.1 * a; food.rotation.y += dt * 9 * a; if (toss > 0.7) { toss = -1; wok.rotation.x = 0; food.position.y = 0; } } }
 return { parts, tick };
   } });
