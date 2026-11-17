@@ -1,10 +1,10 @@
 /* The weightlifting rack: a four-post power rack with a loaded barbell on its hooks, spotter arms, a pull-up bar, spare
    plates on horns at the back, and a cable running over two pulleys from a lat bar to a weight stack behind.
-   build() adds it to whatever `scene` it is given: the rack opens to +z, its back is to the wall at -z, the floor is y = 0, metres.
+   build() adds it to whatever `scene` it is given: the rack opens to +z (in the room it turns to face the mirrors, so a squat is done looking into them), the floor is y = 0, metres.
    Click the barbell to press it, the lat bar to pull the stack up. */
 (window.DREAM_GYM = window.DREAM_GYM || []).push({
   name: 'Rack', title: 'Power rack', line: 'Barbell, pull-up bar, lat pulldown on a cable and weight stack · click the bar or the lat bar',
-  at: [2.75, -0.5], turn: -Math.PI / 2, view: { target: [0, 1.2, 0], cam: [1.9, 1.75, 4.9] },
+  at: [2.45, -1.2], turn: Math.PI, view: { target: [0, 1.1, 0.5], cam: [2.2, 1.85, -3.3] },
   build({ THREE, scene, sound, kit }) {
 const { M, tools, shadows, reps, mat, std } = kit, g = new THREE.Group(); scene.add(g);
 const { mk, box, cyl, rod, tube, grp } = tools(g), R = reps();
