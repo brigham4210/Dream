@@ -81,7 +81,7 @@ tap.userData.click = () => { const p = parts.water; p.t = p.t ? 0 : 1; sound.cli
 cyl(0.028, 0.12, std(0x6b4423, 0.25, 0, { transparent: true, opacity: 0.85 }), 2.52, TOP + 0.06, 0.12); cyl(0.008, 0.05, M.black, 2.52, TOP + 0.145, 0.12, g, 10); box(2.505, 2.56, TOP + 0.165, TOP + 0.175, 0.112, 0.128, M.black);
 
 /* ----------------------------------------------------------------- window */
-const WX0 = 1.4, WX1 = 2.8, WY0 = 1.24, WY1 = 2.32;
+const WX0 = 1.4, WX1 = 2.8, WY0 = 1.44, WY1 = 2.36;
 const view = tex(512, 512, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#9cc7ee'); gr.addColorStop(0.6, '#e4f1f8'); gr.addColorStop(0.72, '#f3f1dc'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
   for (let i = 0; i < 26; i++) { const x = rnd() * w, y = h * (0.7 + rnd() * 0.32), r = 40 + rnd() * 70, gg = c.createRadialGradient(x, y, 0, x, y, r); const l = 38 + rnd() * 22;
     gg.addColorStop(0, `hsla(${95 + rnd() * 30}, 40%, ${l}%, .95)`); gg.addColorStop(1, `hsla(105, 40%, ${l}%, 0)`); c.fillStyle = gg; c.fillRect(x - r, y - r, 2 * r, 2 * r); } });
